@@ -1,0 +1,28 @@
+/**
+ * SAE — Router Principal
+ * Monta todos los sub-routers bajo /api/v1
+ */
+
+'use strict';
+
+const { Router } = require('express');
+
+const authRoutes          = require('./auth.routes');
+const alumnosRoutes       = require('./alumnos.routes');
+const pagosRoutes         = require('./pagos.routes');
+const becasRoutes         = require('./becas.routes');
+const calificacionesRoutes= require('./calificaciones.routes');
+const usuariosRoutes      = require('./usuarios.routes');
+const gruposRoutes        = require('./grupos.routes');
+
+const router = Router();
+
+router.use('/auth',          authRoutes);
+router.use('/alumnos',       alumnosRoutes);
+router.use('/pagos',         pagosRoutes);
+router.use('/becas',         becasRoutes);
+router.use('/calificaciones',calificacionesRoutes);
+router.use('/usuarios',      usuariosRoutes);
+router.use('/grupos',        gruposRoutes);
+
+module.exports = router;

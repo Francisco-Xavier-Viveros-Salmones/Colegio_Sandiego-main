@@ -1,0 +1,9 @@
+node_modules/
+.env
+prisma/sae.db
+prisma/sae.db-journal
+prisma/sae.db-wal
+prisma/sae.db-shm
+coverage/
+dist/
+*.log

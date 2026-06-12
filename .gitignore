@@ -1,0 +1,17 @@
+.env
+node_modules/
+backend/.env
+backend/node_modules/
+backend/coverage/
+backend/dist/
+backups/
+*.log
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+.vscode/
+.windsurf/
+.cerebro/
+.agents/
+.codex/

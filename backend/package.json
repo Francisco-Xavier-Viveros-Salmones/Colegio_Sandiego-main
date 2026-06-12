@@ -1,0 +1,59 @@
+{
+  "name": "sae-colegio-sandiego-backend",
+  "version": "2.0.0",
+  "description": "Sistema Administrativo Escolar (SAE) — Backend Offline-First para Colegio San Diego (PostgreSQL)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:baseline": "prisma migrate resolve --applied 20260527000001_init_postgresql",
+    "db:setup": "npm run db:generate && npm run db:baseline && npm run db:seed",
+    "db:seed": "node prisma/seed.js",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:reset": "node scripts/db-reset.js",
+    "db:validate": "node scripts/db-validate.js",
+    "db:backup": "node scripts/db-backup.js",
+    "db:restore": "node scripts/db-restore.js",
+    "pretest": "prisma generate",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "format": "prettier --write \"src/**/*.js\" \"scripts/**/*.js\" \"prisma/**/*.js\""
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "express-rate-limit": "^7.4.1",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "nodemon": "^3.1.7",
+    "prettier": "^3.0.0",
+    "prisma": "^5.22.0",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "keywords": ["escolar", "offline", "postgresql", "express", "prisma", "lan"],
+  "license": "UNLICENSED",
+  "private": true
+}

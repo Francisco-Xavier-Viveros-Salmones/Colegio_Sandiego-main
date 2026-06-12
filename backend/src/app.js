@@ -1,0 +1,195 @@
+/**
+ * SAE Colegio San Diego — Configuración Express
+ * Aplica todos los middlewares globales y monta el router principal.
+ */
+
+'use strict';
+
+const express = require('express');
+const helmet  = require('helmet');
+const cors    = require('cors');
+const morgan  = require('morgan');
+const path    = require('path');
+const rateLimit = require('express-rate-limit');
+
+const config        = require('./config/env');
+const router        = require('./routes');
+const errorHandler  = require('./middleware/error.middleware');
+
+const app = express();
+
+// ── Seguridad ─────────────────────────────────────────────────
+app.use(
+  helmet({
+    // Permite servir el frontend estático con sus CDN scripts
+    contentSecurityPolicy: false,
+  })
+);
+
+// ── CORS (LAN local — dinámico) ──────────────────────────────
+// Permite orígenes explícitos del .env + cualquier IP de la subred local.
+const os = require('os');
+
+/**
+ * Retorna true si la IP del origin pertenece a la subred LAN del servidor.
+ * Compara el prefijo /24 (primeros 3 octetos) de la IP del servidor.
+ */
+function esOrigenLAN(origin) {
+  if (!origin) return false;
+  try {
+    const url     = new URL(origin);
+    const host    = url.hostname;
+    const ifaces  = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const iface of ifaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          // Comparar /24: primeros 3 octetos
+          const prefijo = iface.address.split('.').slice(0, 3).join('.');
+          if (host.startsWith(prefijo + '.')) return true;
+        }
+      }
+    }
+  } catch { /* ignore parse errors */ }
+  return false;
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Sin origin (curl, Postman, SSR): permitir
+    if (!origin) return callback(null, true);
+    // Orígenes explícitos del .env
+    if (config.cors.origin.includes(origin)) return callback(null, true);
+    // Cualquier IP de la subred LAN
+    if (esOrigenLAN(origin)) return callback(null, true);
+    // Rechazar
+    callback(new Error(`CORS: origen no permitido — ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+
+// ── Rate Limiting ─────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: config.security.rateLimitWindowMs,
+  max: config.security.rateLimitMaxRequests,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    ok: false,
+    message: 'Demasiadas solicitudes. Intenta de nuevo en 15 minutos.',
+  },
+});
+app.use('/api', limiter);
+
+// ── Rate Limit estricto para auth ────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    ok: false,
+    message: 'Demasiados intentos de inicio de sesión. Intenta en 15 minutos.',
+  },
+});
+app.use('/api/v1/auth', authLimiter);
+
+// ── Parsers ───────────────────────────────────────────────────
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true }));
+
+// ── Logs ──────────────────────────────────────────────────────
+if (config.env !== 'test') {
+  app.use(morgan(config.log.level));
+}
+
+// ── /config.js dinámico: inyecta IP del servidor a los nodos satélite ────────
+// Los clientes de la LAN cargan este script y obtienen la IP real del servidor.
+// El script detecta automáticamente la primera IPv4 no-loopback disponible.
+app.get('/config.js', (req, res) => {
+  const ifaces = os.networkInterfaces();
+  let   serverIP = '127.0.0.1';
+
+  for (const name of Object.keys(ifaces)) {
+    for (const iface of ifaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        serverIP = iface.address;
+        break;
+      }
+    }
+  }
+
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store');
+  res.send(
+`/* SAE — Configuración dinámica generada por el servidor (${new Date().toISOString()}) */
+window.SAE_CONFIG = {
+  API_BASE:  'http://${serverIP}:${config.port}/api/v1',
+  SERVER_IP: '${serverIP}',
+  PORT:      ${config.port},
+  VERSION:   '2.0.0',
+};
+console.log('[SAE] Servidor:', window.SAE_CONFIG.SERVER_IP + ':' + window.SAE_CONFIG.PORT);`
+  );
+});
+
+// ── Frontend estático (sirve los paneles HTML existentes) ─────
+// REGLA: el frontend NO se modifica. Solo se sirve como archivos estáticos.
+//
+// path.resolve desde backend/src/app.js:
+//   __dirname  = .../colegio-sandiego/backend/src
+//   ../..      = .../colegio-sandiego
+//   ../../frontend = .../colegio-sandiego/frontend   ← correcto
+//
+// Usamos path.resolve para evitar diferencias Windows/WSL con separadores.
+const frontendPath = path.resolve(__dirname, '..', '..', 'frontend');
+
+app.use(
+  express.static(frontendPath, {
+    // No buscar index.html automáticamente — los paneles tienen nombres propios
+    index: false,
+    // Extensiones que puede servir
+    extensions: ['html'],
+  })
+);
+
+// ── Ruta raíz: redirige al panel de administración ────────────
+// Placeholder temporal hasta que se implemente la pantalla de login.
+// Una vez que exista /auth/login.html, este redirect apuntará ahí.
+app.get('/', (req, res) => {
+  res.redirect('/admin_panel.html');
+});
+
+// ── Accesos directos explícitos a cada panel ──────────────────
+// Permite acceder mediante rutas limpias además de la URL directa al .html
+app.get('/admin',   (req, res) => res.sendFile(path.join(frontendPath, 'admin_panel.html')));
+app.get('/gestor',  (req, res) => res.sendFile(path.join(frontendPath, 'gestor_panel.html')));
+app.get('/maestra', (req, res) => res.sendFile(path.join(frontendPath, 'maestra_panel.html')));
+
+// ── Rutas API ─────────────────────────────────────────────────
+app.use('/api/v1', router);
+
+// ── Health check ──────────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    sistema: 'SAE Colegio San Diego',
+    version: '2.0.0',
+    entorno: config.env,
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// ── 404 para rutas API no encontradas ────────────────────────
+app.use('/api', (req, res) => {
+  res.status(404).json({
+    ok: false,
+    message: `Ruta API no encontrada: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// ── Manejador de errores global ───────────────────────────────
+app.use(errorHandler);
+
+module.exports = app;

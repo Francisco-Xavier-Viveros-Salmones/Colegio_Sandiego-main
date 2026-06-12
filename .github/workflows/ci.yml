@@ -1,0 +1,132 @@
+name: SAE — CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  lint-and-test:
+    name: Lint + Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: sae_admin
+          POSTGRES_PASSWORD: SaeColegio2026
+          POSTGRES_DB: sae_colegio_san_diego_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      DATABASE_URL: postgresql://sae_admin:SaeColegio2026@localhost:5432/sae_colegio_san_diego_test
+      JWT_SECRET: ci-secret-key-para-pruebas-minimo-32-chars
+      NODE_ENV: test
+      PORT: 3001
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Generar Prisma Client
+        run: npx prisma generate
+
+      - name: Aplicar esquema PostgreSQL (init-db)
+        run: |
+          PGPASSWORD=SaeColegio2026 psql \
+            -h localhost -U sae_admin -d sae_colegio_san_diego_test \
+            -f ../BD-ColegioSandiego/init-db/01_esquema_base.sql
+          PGPASSWORD=SaeColegio2026 psql \
+            -h localhost -U sae_admin -d sae_colegio_san_diego_test \
+            -f ../BD-ColegioSandiego/init-db/02_configuracion.sql
+          PGPASSWORD=SaeColegio2026 psql \
+            -h localhost -U sae_admin -d sae_colegio_san_diego_test \
+            -f ../BD-ColegioSandiego/init-db/03_integridad_referencial.sql
+          PGPASSWORD=SaeColegio2026 psql \
+            -h localhost -U sae_admin -d sae_colegio_san_diego_test \
+            -f ../BD-ColegioSandiego/init-db/04_triggers_auditoria.sql
+
+      - name: Marcar baseline Prisma
+        run: npx prisma migrate resolve --applied 20260527000001_init_postgresql
+
+      - name: Cargar seed de prueba
+        run: npm run db:seed
+
+      - name: ESLint
+        run: npm run lint
+        continue-on-error: true  # No falla el pipeline en warnings de estilo
+
+      - name: Prettier (format check)
+        run: npx prettier --check "src/**/*.js" "scripts/**/*.js" "prisma/**/*.js"
+        continue-on-error: true  # Formato no bloquea el pipeline
+
+      - name: Tests
+        run: npm test
+
+  docker-build:
+    name: Verificar build Docker
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Build imagen Docker backend
+        run: |
+          docker build \
+            --build-arg NODE_ENV=production \
+            -t sae-backend:ci \
+            ./backend
+
+      - name: Smoke test — levantar stack
+        run: |
+          # Generar .env mínimo para CI — NO copiar .env.example (tiene placeholders post-BF11)
+          printf 'POSTGRES_PASSWORD=SaeColegio2026\nJWT_SECRET=ci-docker-smoke-test-secret-32-chars\n' > backend/.env
+          docker compose up -d
+          # Esperar a que /health responda — máx 60s (12 intentos × 5s)
+          HEALTHY=0
+          for i in $(seq 1 12); do
+            sleep 5
+            if curl -sf --max-time 5 http://localhost:3000/health > /dev/null; then
+              echo "✅ Backend healthy (intento $i)"
+              HEALTHY=1
+              break
+            fi
+            echo "⏳ Intento $i/12 — backend no listo aún"
+          done
+          if [ "$HEALTHY" != "1" ]; then
+            echo "❌ Smoke test fallido — backend no respondió en 60s"
+            docker compose logs
+            docker compose down
+            exit 1
+          fi
+          curl -f http://localhost:3000/health
+          docker compose down

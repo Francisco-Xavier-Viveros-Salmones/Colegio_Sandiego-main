@@ -1,0 +1,39 @@
+# docker-compose.yml — SAE Colegio San Diego | Capa de Datos
+# Levanta PostgreSQL 16 con persistencia local e inicialización automática.
+# Compose v2+ ya no requiere la directiva 'version'.
+
+services:
+  postgres_sae:
+    image: postgres:16-alpine
+    container_name: sae_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: sae_admin
+      POSTGRES_PASSWORD: SaeColegio2026
+      POSTGRES_DB: sae_colegio_san_diego
+      # Configuración regional para fechas y orden alfabético en español
+      LANG: es_MX.utf8
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      # Persistencia de los datos: sobrevive a 'docker compose down'
+      - ./postgres_data:/var/lib/postgresql/data
+      # Scripts SQL que corren SOLO la primera vez que se crea la base
+      - ./init-db:/docker-entrypoint-initdb.d
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sae_admin -d sae_colegio_san_diego"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # Recursos límite (opcional, útil para que no se coma toda la RAM en dev)
+    deploy:
+      resources:
+        limits:
+          memory: 512M

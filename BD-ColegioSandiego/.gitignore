@@ -1,0 +1,11 @@
+# Datos binarios de la base de datos (NUNCA SUBIR)
+postgres_data/
+
+# Archivos de configuración sensible
+.env
+
+# Archivos temporales y logs
+*.log
+
+# Configuración personal de VS Code
+.vscode/
