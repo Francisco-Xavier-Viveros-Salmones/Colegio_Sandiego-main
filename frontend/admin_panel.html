@@ -155,7 +155,55 @@
       <template x-if="view==='becas'"><div><div class="flex justify-between items-center mb-5"><h2 class="text-xl font-bold text-navy-800">Gestión de Becas</h2><button class="btn-success" @click="abrirModalBeca()"><i data-lucide="award"></i> Asignar nueva beca</button></div><div class="grid grid-cols-3 gap-5 mb-5"><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="users" class="w-6 h-6 text-emerald-600"></i></div><div class="font-bold text-gray-800">Beca por hermanos</div><div class="text-3xl font-bold text-emerald-600 mt-1">15%</div><div class="text-xs text-gray-500 mt-1">2+ alumnos en el colegio</div></div><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="star" class="w-6 h-6 text-amber-600"></i></div><div class="font-bold text-gray-800">Excelencia académica</div><div class="text-3xl font-bold text-amber-600 mt-1">20%</div><div class="text-xs text-gray-500">Promedio >= 9.5</div></div><div class="card-clean p-5 text-center"><div class="w-12 h-12 rounded-full bg-navy-50 flex items-center justify-center mx-auto mb-3"><i data-lucide="calendar" class="w-6 h-6 text-navy-600"></i></div><div class="font-bold text-gray-800">Inscripción temprana</div><div class="text-3xl font-bold text-navy-600 mt-1">10%</div><div class="text-xs text-gray-500">Pago antes del 30 abril</div></div></div><div class="card-clean p-5"><h3 class="font-semibold text-gray-700 mb-3">Becas asignadas actualmente</h3><table class="w-full text-sm"><tr class="border-b border-gray-100"><td class="py-2 font-medium">María González</td><td>Beca por hermanos</td><td><span class="badge-emerald">Activa 15%</span></td></tr><tr class="border-b border-gray-100"><td class="py-2 font-medium">Carlos Fernández</td><td>Excelencia académica</td><td><span class="badge-amber">Activa 20%</span></td></tr></table></div></div></template>
 
       <!-- USUARIOS -->
-      <template x-if="view==='usuarios'"><div><div class="flex justify-between mb-4"><h2 class="text-xl font-bold text-navy-800">Usuarios del sistema</h2><button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Estándar'}">+ Nuevo usuario</button></div><div class="card-clean overflow-hidden"><table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="p-3 text-left">Usuario</th><th class="p-3 text-left">Rol</th><th class="p-3 text-left">Estado</th><th class="p-3 text-right">Acciones</th></tr></thead><tbody><template x-for="(user,idx) in listaUsuarios"><tr class="border-b"><td class="p-3 font-medium" x-text="user.nombre"></td><td class="p-3" x-text="user.rol"></td><td class="p-3"><span class="badge-emerald">Activo</span></td><td class="p-3 text-right flex gap-2 justify-end"><button class="text-navy-600 text-xs underline" @click="abrirResetPassword(user)">Restablecer pwd</button><button class="text-crimson-600 text-xs underline" @click="eliminarUsuario(idx)">Eliminar</button></td></tr></template></tbody></table></div></div></template>
+      <template x-if="view==='usuarios'">
+        <div>
+          <div class="flex justify-between mb-4">
+            <h2 class="text-xl font-bold text-navy-800">Usuarios del sistema</h2>
+            <div class="flex gap-4 items-center">
+              <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                <input type="checkbox" x-model="verInactivos" @change="_cargarUsuariosAPI()" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600">
+                Mostrar inactivos
+              </label>
+              <button class="btn-primary" @click="modalUsuario=true; nuevoUsuario={nombre:'',rol:'Docente'}">+ Nuevo usuario</button>
+            </div>
+          </div>
+          <div class="card-clean overflow-hidden">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="p-3 text-left">Usuario</th>
+                  <th class="p-3 text-left">Rol</th>
+                  <th class="p-3 text-left">Estado</th>
+                  <th class="p-3 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(user,idx) in listaUsuarios">
+                  <tr class="border-b" :class="!user.activo ? 'bg-gray-50' : ''">
+                    <td class="p-3 font-medium text-gray-800" x-text="user.nombre"></td>
+                    <td class="p-3 text-gray-600" x-text="user.rol"></td>
+                    <td class="p-3">
+                      <span x-show="user.activo" class="badge-emerald">Activo</span>
+                      <span x-show="!user.activo" class="badge-gray">Inactivo</span>
+                    </td>
+                    <td class="p-3 text-right flex gap-2 justify-end">
+                      <template x-if="user.activo">
+                        <div class="flex gap-2">
+                          <button class="text-navy-600 text-xs hover:underline" @click="abrirResetPassword(user)">Restablecer pwd</button>
+                          <button class="text-crimson-600 text-xs hover:underline" @click="eliminarUsuario(idx)">Eliminar</button>
+                        </div>
+                      </template>
+                      <template x-if="!user.activo">
+                        <button class="text-emerald-600 font-semibold text-xs hover:underline" @click="reactivarUsuario(user.id)">Reactivar</button>
+                      </template>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
 
       <!-- REPORTES -->
       <template x-if="view==='reportes'"><div><h2 class="text-xl font-bold text-navy-800 mb-4">Reportes descargables (PDF)</h2><div class="grid md:grid-cols-2 gap-5"><div class="card-clean p-5 border-l-4 border-navy-500"><h3 class="font-semibold text-gray-800">Reporte financiero</h3><p class="text-sm text-gray-500 my-2">Listado de ingresos y pagos del periodo</p><button class="btn-primary" @click="generarPDF('pagos')"><i data-lucide="download"></i> Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-emerald-500"><h3 class="font-semibold text-gray-800">Reporte de alumnos</h3><p class="text-sm text-gray-500 my-2">Directorio completo con padres y contacto</p><button class="btn-primary" @click="generarPDF('alumnos')"><i data-lucide="users"></i> Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-amber-500"><h3 class="font-semibold text-gray-800">Reporte de becas</h3><p class="text-sm text-gray-500 my-2">Beneficiarios y porcentajes asignados</p><button class="btn-primary" @click="generarPDF('becas')">Descargar PDF</button></div><div class="card-clean p-5 border-l-4 border-gray-300"><h3 class="font-semibold text-gray-800">Configuración ciclo</h3><p class="text-sm text-gray-500 my-2">Planes de pago activos</p><button class="btn-outline" @click="descargarCicloConfig">Exportar</button></div></div></div></template>
@@ -275,27 +323,38 @@
               <div class="p-4 border-b flex justify-between items-center">
                 <div>
                   <h3 class="font-bold text-navy-800" x-text="'Permisos para: ' + usuarioPermisosActivo?.nombre"></h3>
-                  <div class="text-xs text-gray-500" x-text="usuarioPermisosActivo?.rol"></div>
-                </div>
-                <button class="btn-primary text-xs py-1" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)">Guardar cambios</button>
-              </div>
-              <div class="p-4 space-y-4">
-                <template x-for="mod in todosModulos" :key="mod">
-                  <div class="flex items-center justify-between py-2 border-b border-gray-50">
-                    <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
-                    <div class="flex gap-4">
-                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                        <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]"> Ninguno
-                      </label>
-                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                        <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]"> Lectura
-                      </label>
-                      <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
-                        <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]"> Lectura / Edición
-                      </label>
-                    </div>
+                  <div class="flex gap-2 items-center mt-1">
+                    <div class="text-xs text-gray-500 font-medium" x-text="usuarioPermisosActivo?.rol"></div>
+                    <span x-show="!usuarioPermisosActivo?.activo" class="badge-gray text-[10px] px-1.5 py-0">Inactivo</span>
                   </div>
-                </template>
+                </div>
+                <button class="btn-primary text-xs py-1" @click="guardarPermisosUsuario(usuarioPermisosActivo.id)" :disabled="!usuarioPermisosActivo?.activo" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 cursor-not-allowed' : ''">Guardar cambios</button>
+              </div>
+              <div class="p-4">
+                <div x-show="!usuarioPermisosActivo?.activo" class="p-4 mb-4 bg-amber-50 border-l-4 border-amber-500 text-amber-800 text-sm flex justify-between items-center">
+                  <div>
+                    <strong>Cuenta inactiva.</strong> Este usuario fue desactivado. Debes reactivarlo antes de modificar sus accesos.
+                  </div>
+                  <button class="btn-outline border-amber-500 text-amber-700 bg-white hover:bg-amber-100" @click="reactivarUsuario(usuarioPermisosActivo.id)">Reactivar cuenta</button>
+                </div>
+                <div class="space-y-4" :class="!usuarioPermisosActivo?.activo ? 'opacity-50 pointer-events-none' : ''">
+                  <template x-for="mod in todosModulos" :key="mod">
+                    <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                      <div class="font-medium text-sm text-gray-700 capitalize" x-text="mod"></div>
+                      <div class="flex gap-4">
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                          <input type="radio" :name="'permiso_'+mod" value="NINGUNO" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Ninguno
+                        </label>
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                          <input type="radio" :name="'permiso_'+mod" value="lectura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Lectura
+                        </label>
+                        <label class="flex items-center gap-1 text-sm text-gray-600 cursor-pointer">
+                          <input type="radio" :name="'permiso_'+mod" value="escritura" x-model="permisosEditando[mod]" :disabled="!usuarioPermisosActivo?.activo"> Lectura / Edición
+                        </label>
+                      </div>
+                    </div>
+                  </template>
+                </div>
               </div>
             </div>
           </div>
@@ -318,28 +377,27 @@
             <table class="w-full text-xs text-left">
               <thead class="bg-gray-100 text-gray-600">
                 <tr>
-                  <th class="p-3">ID</th>
-                  <th class="p-3">Fecha y Hora</th>
+                  <th class="p-3 w-16">ID</th>
+                  <th class="p-3 w-32">Fecha y Hora</th>
                   <th class="p-3">Usuario</th>
-                  <th class="p-3">Acción</th>
-                  <th class="p-3">Tabla / Detalle</th>
+                  <th class="p-3 w-32">Rol</th>
+                  <th class="p-3 w-32">Acción</th>
+                  <th class="p-3 w-64">Módulo / Entidad afectada</th>
+                  <th class="p-3">Detalle (antes → después)</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                <template x-for="log in bitacoraLogs" :key="log.id">
+                <template x-for="log in bitacoraLogs" :key="log.logId">
                   <tr class="hover:bg-gray-50 transition">
-                    <td class="p-3 text-gray-400 font-mono" x-text="'#'+log.id"></td>
+                    <td class="p-3 text-gray-400 font-mono" x-text="'#'+log.logId"></td>
                     <td class="p-3 whitespace-nowrap" x-text="new Date(log.fechaHora).toLocaleString('es-MX')"></td>
-                    <td class="p-3 font-medium text-navy-700">
-                      <span x-text="log.usuario?.nombre || '(sistema)'"></span>
-                    </td>
+                    <td class="p-3 font-medium text-navy-700" x-text="log.usuario"></td>
+                    <td class="p-3 text-gray-500" x-text="log.rol"></td>
                     <td class="p-3 font-bold"
-                        :class="{'text-emerald-600': log.accion==='INSERT', 'text-amber-600': log.accion==='UPDATE', 'text-crimson-600': log.accion==='DELETE', 'text-navy-600': !['INSERT','UPDATE','DELETE'].includes(log.accion)}"
-                        x-text="log.accion"></td>
-                    <td class="p-3 text-gray-600">
-                      <div class="font-medium" x-text="log.tabla + (log.registroId ? ' (ID: '+log.registroId+')' : '')"></div>
-                      <div class="text-[10px] text-gray-400 truncate max-w-sm mt-0.5" :title="log.descripcion" x-text="log.descripcion"></div>
-                    </td>
+                        :class="{'text-emerald-600': log.tipoAccion==='Creación', 'text-amber-600': log.tipoAccion==='Modificación', 'text-crimson-600': log.tipoAccion==='Eliminación', 'text-navy-600': !['Creación','Modificación','Eliminación'].includes(log.tipoAccion)}"
+                        x-text="log.tipoAccion"></td>
+                    <td class="p-3 text-gray-700 font-medium" x-text="log.entidad"></td>
+                    <td class="p-3 text-gray-500 text-xs" x-text="log.detalle"></td>
                   </tr>
                 </template>
                 <tr x-show="bitacoraLogs.length===0">
@@ -433,7 +491,24 @@
   <div x-show="modalBecaActiva" x-cloak class="modal-mask" @click.self="modalBecaActiva=false"><div class="modal-container p-6"><div class="font-bold text-lg text-navy-800">Asignar nueva beca</div><p class="text-xs text-gray-500 mt-1">Selecciona el alumno y el tipo de beca. El administrador aprueba en el mismo acto.</p><select class="input-modern mt-3" x-model="nuevaBeca.alumnoId"><option value="">— Selecciona un alumno —</option><template x-for="a in listaAlumnos" :key="a.id"><option :value="a.id" x-text="a.nombre"></option></template></select><select class="input-modern mt-2" x-model="nuevaBeca.tipo"><option>Beca por hermanos (15%)</option><option>Excelencia académica (20%)</option><option>Inscripción temprana (10%)</option></select><div class="flex justify-end gap-2 mt-5"><button class="btn-outline" @click="modalBecaActiva=false">Cancelar</button><button class="btn-success" @click="asignarBeca()">Asignar beca</button></div></div></div>
 
   <!-- MODAL USUARIO -->
-  <div x-show="modalUsuario" x-cloak class="modal-mask" @click.self="modalUsuario=false"><div class="modal-container p-6"><div class="font-bold text-lg text-navy-800">Crear nuevo usuario</div><input class="input-modern mt-3" placeholder="Nombre completo" x-model="nuevoUsuario.nombre"><select class="input-modern mt-2" x-model="nuevoUsuario.rol"><option>Administrador</option><option>Estándar (Maestra)</option></select><div class="flex justify-end gap-2 mt-5"><button class="btn-outline" @click="modalUsuario=false">Cancelar</button><button class="btn-primary" @click="agregarUsuario(); modalUsuario=false">Guardar usuario</button></div></div></div>
+  <div x-show="modalUsuario" x-cloak class="modal-mask" @click.self="modalUsuario=false">
+    <div class="modal-container p-6">
+      <div class="font-bold text-lg text-navy-800">Crear nuevo colaborador</div>
+      <input class="input-modern mt-3" placeholder="Nombre completo" x-model="nuevoUsuario.nombre">
+      <input class="input-modern mt-2" placeholder="Nombre de usuario (ej. luis.reyes)" x-model="nuevoUsuario.username">
+      <input type="password" class="input-modern mt-2" placeholder="Contraseña temporal" x-model="nuevoUsuario.password">
+      <select class="input-modern mt-2" x-model="nuevoUsuario.rol">
+        <option value="" disabled selected>Selecciona un rol</option>
+        <option>Administrador</option>
+        <option>Gestor administrativo</option>
+        <option>Docente</option>
+      </select>
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-outline" @click="modalUsuario=false">Cancelar</button>
+        <button class="btn-primary" @click="agregarUsuario()">Guardar usuario</button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL NUEVO ALUMNO -->
   <div x-show="modalNuevoAlumno" x-cloak class="modal-mask" @click.self="modalNuevoAlumno=false"><div class="modal-container p-6"><div class="font-bold text-lg text-navy-800">Registrar nuevo alumno</div><div class="space-y-3 mt-3"><input class="input-modern" placeholder="Nombre completo" x-model="nuevoAlumnoData.nombre"><input class="input-modern" placeholder="Matrícula" x-model="nuevoAlumnoData.matricula"><input class="input-modern" placeholder="CURP" x-model="nuevoAlumnoData.curp"><select class="input-modern" x-model="nuevoAlumnoData.grupoId"><option value="">— Selecciona un grupo —</option><template x-for="g in gruposData" :key="g.id"><option :value="g.id" x-text="g.nombre"></option></template></select><input class="input-modern" placeholder="Nombre del padre o tutor" x-model="nuevoAlumnoData.padre"><input class="input-modern" placeholder="Teléfono de contacto" x-model="nuevoAlumnoData.telefono"></div><div class="flex justify-end gap-2 mt-5"><button class="btn-outline" @click="modalNuevoAlumno=false">Cancelar</button><button class="btn-primary" @click="guardarNuevoAlumno()">Registrar alumno</button></div></div></div>
@@ -482,6 +557,7 @@
       modalResetPassword: false,
       _resetTarget: { id: null, nombre: '' },
       _resetNuevaPassword: '',
+      verInactivos: false,
       cargando: false,
 
       // ── Búsquedas ───────────────────────────────────────────────────────────
@@ -608,9 +684,9 @@
       },
 
       async _cargarUsuariosAPI() {
-        const res = await window.saeApi.usuarios.listar();
+        const res = await window.saeApi.usuarios.listar(this.verInactivos);
         if (res.ok && res.data) {
-          this.listaUsuarios = res.data.map(u => ({ id: u.id, nombre: u.nombre, rol: u.rol }));
+          this.listaUsuarios = res.data.map(u => ({ id: u.id, nombre: u.nombre, rol: u.rol, activo: u.activo }));
         }
       },
 
@@ -662,8 +738,8 @@
           if (resMod.ok) this.todosModulos = resMod.data;
         }
         
-        // 2. Cargar usuarios GESTOR y MAESTRA
-        const resUsu = await window.saeApi.usuarios.listar();
+        // 2. Cargar usuarios GESTOR y MAESTRA (incluyendo inactivos para RF-02 Flujo Alterno A)
+        const resUsu = await window.saeApi.usuarios.listar(true);
         if (resUsu.ok) {
           this.listaUsuariosPermisos = resUsu.data.filter(u => u.rol === 'GESTOR' || u.rol === 'MAESTRA');
         }
@@ -908,25 +984,27 @@
 
       // ── Usuarios ─────────────────────────────────────────────────────────────
       async agregarUsuario() {
-        if (!this.nuevoUsuario.nombre) {
-          window.saeApi.toast('advertencia', 'Completa el nombre del usuario.');
+        if (!this.nuevoUsuario.nombre || !this.nuevoUsuario.rol || !this.nuevoUsuario.password || !this.nuevoUsuario.username) {
+          window.saeApi.toast('advertencia', 'Todos los campos (nombre, usuario, rol y contraseña) son obligatorios.');
           return;
         }
-        const rol      = window.saeApi.ROL_MAP[this.nuevoUsuario.rol] || 'MAESTRA';
-        const username = this.nuevoUsuario.nombre
-          .toLowerCase()
-          .normalize('NFD').replace(/[̀-ͯ]/g, '')
-          .replace(/\s+/g, '.').replace(/[^a-z.]/g, '');
+        
+        const rol = window.saeApi.ROL_MAP[this.nuevoUsuario.rol] || 'MAESTRA';
         const res = await window.saeApi.usuarios.crear({
           nombre:   this.nuevoUsuario.nombre,
-          username,
-          password: 'sandiego2026',
+          username: this.nuevoUsuario.username,
+          password: this.nuevoUsuario.password,
           rol,
         });
+        
         if (res.ok) {
           this.listaUsuarios.push({ id: res.data.id, nombre: res.data.nombre, rol: res.data.rol });
-          window.saeApi.toast('exito', `Usuario "${res.data.username}" creado. Contraseña inicial: sandiego2026`);
+          window.saeApi.toast('exito', `Cuenta para ${res.data.nombre} creada exitosamente con el rol de ${this.nuevoUsuario.rol}.`);
+          this.modalUsuario = false;
+          // Limpiar el formulario
+          this.nuevoUsuario = { nombre: '', username: '', password: '', rol: '' };
         } else {
+          // El backend responderá con status 409 si el usuario ya existe
           window.saeApi.toast('error', res.message || 'Error al crear usuario.');
         }
       },
@@ -967,6 +1045,21 @@
           window.saeApi.toast('error', res.message || 'Error al eliminar usuario.');
         }
         this._usuarioAEliminar = { idx: null, id: null, nombre: '' };
+      },
+      async reactivarUsuario(id) {
+        const res = await window.saeApi.usuarios.reactivar(id);
+        if (res.ok) {
+          window.saeApi.toast('exito', `El usuario ha sido reactivado exitosamente.`);
+          await this._cargarUsuariosAPI();
+          // Update permissions tab if necessary
+          if (this.view === 'permisos') {
+            await this.cargarPermisos();
+            const usr = this.listaUsuariosPermisos.find(u => u.id === id);
+            if (usr) await this.seleccionarUsuarioPermisos(usr);
+          }
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al reactivar usuario.');
+        }
       },
 
       // ── PDF (usa datos ya cargados en memoria) ───────────────────────────────

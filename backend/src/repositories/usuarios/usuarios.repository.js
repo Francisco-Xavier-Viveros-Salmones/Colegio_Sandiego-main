@@ -33,8 +33,12 @@ function mapUsuario(u) {
 
 // ── Queries ───────────────────────────────────────────────────
 
-async function findAll({ rol } = {}) {
-  const where = { activo: true, eliminadoEn: null };
+async function findAll({ rol, incluirInactivos } = {}) {
+  const where = {};
+  if (!incluirInactivos) {
+    where.activo = true;
+    where.eliminadoEn = null;
+  }
 
   // Filtro por rol de sistema (ADMIN/GESTOR/MAESTRA)
   if (rol) {
@@ -46,9 +50,8 @@ async function findAll({ rol } = {}) {
     const codigos = codigosRol[rol] ?? [rol.toLowerCase()];
     where.roles = {
       some: {
-        activo: true,
-        eliminadoEn: null,
         rol: { codigo: { in: codigos } },
+        ...(incluirInactivos ? {} : { activo: true, eliminadoEn: null }),
       },
     };
   }
@@ -67,7 +70,7 @@ async function findAll({ rol } = {}) {
       creadoEn:       true,
       actualizadoEn:  true,
       roles: {
-        where: { activo: true, eliminadoEn: null },
+        where: incluirInactivos ? {} : { activo: true, eliminadoEn: null },
         select: { activo: true, eliminadoEn: true, rol: { select: { codigo: true } } },
       },
     },
@@ -79,7 +82,7 @@ async function findAll({ rol } = {}) {
 
 async function findById(id) {
   const u = await prisma.usuario.findFirst({
-    where: { usuarioId: Number(id), activo: true, eliminadoEn: null },
+    where: { usuarioId: Number(id) },
     select: {
       usuarioId:      true,
       nombreCompleto: true,
@@ -92,7 +95,6 @@ async function findById(id) {
       creadoEn:       true,
       actualizadoEn:  true,
       roles: {
-        where: { activo: true, eliminadoEn: null },
         select: { activo: true, eliminadoEn: true, rol: { select: { codigo: true } } },
       },
     },
@@ -139,8 +141,8 @@ async function create(datos, auditCtx = {}) {
   const rolReg = await prisma.rol.findFirst({ where: { codigo: codigoRol } });
   if (!rolReg) throw new Error(`Rol '${codigoRol}' no encontrado en la BD.`);
 
-  const usuario = await withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', (tx) =>
-    tx.usuario.create({
+  const usuario = await withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', async (tx) => {
+    const u = await tx.usuario.create({
       data: {
         nombreCompleto: nombre,
         nombreUsuario:  username,
@@ -171,8 +173,39 @@ async function create(datos, auditCtx = {}) {
           select: { activo: true, eliminadoEn: true, rol: { select: { codigo: true } } },
         },
       },
-    })
-  );
+    });
+
+    // Asignar permisos predefinidos según el rol (RF-01)
+    let defaultPermisos = [];
+    if (codigoRol === 'empleado') { // GESTOR
+      defaultPermisos = [
+        { modulo: 'alumnos', nivel: 'escritura' },
+        { modulo: 'tutores', nivel: 'escritura' },
+        { modulo: 'pagos', nivel: 'escritura' },
+        { modulo: 'becas', nivel: 'escritura' },
+        { modulo: 'colegiaturas', nivel: 'escritura' },
+        { modulo: 'reportes', nivel: 'escritura' },
+      ];
+    } else if (codigoRol === 'docente') { // MAESTRA
+      defaultPermisos = [
+        { modulo: 'alumnos', nivel: 'lectura' },
+        { modulo: 'calificaciones', nivel: 'escritura' },
+      ];
+    }
+
+    if (defaultPermisos.length > 0) {
+      await tx.usuarioPermisoModulo.createMany({
+        data: defaultPermisos.map(p => ({
+          usuarioId: u.usuarioId,
+          modulo: p.modulo,
+          nivel: p.nivel,
+          activo: true,
+        })),
+      });
+    }
+
+    return u;
+  });
 
   return mapUsuario(usuario);
 }
@@ -236,4 +269,27 @@ async function softDelete(id, auditCtx = {}) {
   );
 }
 
-module.exports = { findAll, findById, findByUsername, create, update, softDelete };
+async function reactivar(id, auditCtx = {}) {
+  await withAudit(auditCtx.usuarioId ?? null, auditCtx.ip ?? '0.0.0.0', async (tx) => {
+    await tx.usuario.update({
+      where: { usuarioId: Number(id) },
+      data: { activo: true, eliminadoEn: null },
+    });
+    // Reactivar roles
+    await tx.usuarioRol.updateMany({
+      where: { usuarioId: Number(id) },
+      data: { activo: true, eliminadoEn: null },
+    });
+  });
+  return findById(id);
+}
+
+module.exports = {
+  findAll,
+  findById,
+  findByUsername,
+  create,
+  update,
+  softDelete,
+  reactivar,
+};

@@ -57,4 +57,13 @@ async function eliminar(id, auditCtx = {}) {
   return usuariosRepository.softDelete(id, auditCtx);
 }
 
-module.exports = { listar, obtenerPorId, crear, actualizar, eliminar };
+async function reactivar(id, auditCtx = {}) {
+  // Try to find the user even if they are inactive (which they are)
+  const usuario = await usuariosRepository.findById(id);
+  if (!usuario) {
+    throw Object.assign(new Error('Usuario no encontrado.'), { statusCode: 404 });
+  }
+  return usuariosRepository.reactivar(id, auditCtx);
+}
+
+module.exports = { listar, obtenerPorId, crear, actualizar, eliminar, reactivar };

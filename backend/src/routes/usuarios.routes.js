@@ -14,6 +14,7 @@ router.get('/',         authorize('ADMIN'), usuariosController.listar);
 router.get('/:id',      authorize('ADMIN'), usuariosController.obtener);
 router.post('/',        authorize('ADMIN'), usuariosController.crear);
 router.put('/:id',      authorize('ADMIN'), usuariosController.actualizar);
+router.put('/:id/reactivar', authorize('ADMIN'), usuariosController.reactivar);
 router.delete('/:id',   authorize('ADMIN'), usuariosController.eliminar);
 
 module.exports = router;

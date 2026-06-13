@@ -54,6 +54,10 @@ async function findAll({ fechaInicio, fechaFin, usuarioId, pagina = 1, limite = 
             usuarioId:      true,
             nombreCompleto: true,
             nombreUsuario:  true,
+            roles: {
+              where: { activo: true, eliminadoEn: null },
+              select: { rol: { select: { codigo: true } } }
+            }
           },
         },
       },
@@ -64,19 +68,7 @@ async function findAll({ fechaInicio, fechaFin, usuarioId, pagina = 1, limite = 
     prisma.logAuditoria.count({ where }),
   ]);
 
-  const datos = registros.map((r) => ({
-    id:            Number(r.logId),          // BigInt → Number para JSON
-    fechaHora:     r.fechaHora,
-    accion:        r.accion,
-    tabla:         r.tablaAfectada,
-    registroId:    r.registroId,
-    descripcion:   r.descripcion,
-    usuario:       r.usuario
-      ? { id: r.usuario.usuarioId, nombre: r.usuario.nombreCompleto, username: r.usuario.nombreUsuario }
-      : { id: null, nombre: '(sistema)', username: null },
-  }));
-
-  return { datos, total: Number(total), pagina: Number(pagina), limite: Number(limite) };
+  return { datos: registros, total: Number(total), pagina: Number(pagina), limite: Number(limite) };
 }
 
 module.exports = { findAll };

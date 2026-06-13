@@ -9,8 +9,8 @@ const { success, created } = require('../../utils/response.utils');
 
 async function listar(req, res, next) {
   try {
-    const { rol } = req.query;
-    const usuarios = await usuariosService.listar({ rol });
+    const { rol, incluirInactivos } = req.query;
+    const usuarios = await usuariosService.listar({ rol, incluirInactivos: incluirInactivos === 'true' });
     return success(res, usuarios, `${usuarios.length} usuarios encontrados.`);
   } catch (err) { next(err); }
 }
@@ -53,4 +53,12 @@ async function eliminar(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { listar, obtener, crear, actualizar, eliminar };
+async function reactivar(req, res, next) {
+  try {
+    const auditCtx = { usuarioId: req.usuario?.id, ip: req.ip };
+    const usuario = await usuariosService.reactivar(req.params.id, auditCtx);
+    return success(res, usuario, 'Usuario reactivado correctamente.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { listar, obtener, crear, actualizar, eliminar, reactivar };

@@ -225,14 +225,23 @@
     actualizar: function (id, datos)   { return request('PUT',  '/grupos/' + id, datos); },
   };
 
-  // ── Módulo: Usuarios ────────────────────────────────────────────────────────
+  // ── Módulo: Usuarios (Solo ADMIN) ───────────────────────────────────────────
   var usuarios = {
-    listar:          function ()            { return request('GET',    '/usuarios'); },
+    listar: function(incluirInactivos = false) {
+      return request('GET', '/usuarios' + (incluirInactivos ? '?incluirInactivos=true' : ''));
+    },
     obtener:         function (id)          { return request('GET',    '/usuarios/' + id); },
-    crear:           function (datos)       { return request('POST',   '/usuarios', datos); },
+    crear: function(datos) {
+      return request('POST', '/usuarios', datos);
+    },
     actualizar:      function (id, datos)   { return request('PUT',    '/usuarios/' + id, datos); },
-    eliminar:        function (id)          { return request('DELETE', '/usuarios/' + id); },
-    resetPassword:   function (id, nuevaPassword) {
+    eliminar: function(id) {
+      return request('DELETE', '/usuarios/' + id);
+    },
+    reactivar: function(id) {
+      return request('PUT', '/usuarios/' + id + '/reactivar');
+    },
+    resetPassword: function(id, nuevaPassword) {
       return request('PATCH', '/auth/usuarios/' + id + '/reset-password', { nuevaPassword });
     },
   };
@@ -339,9 +348,11 @@
   };
 
   var ROL_MAP = {
-    'Administrador':      'ADMIN',
-    'Estándar (Maestra)': 'MAESTRA',
-    'Gestor':             'GESTOR',
+    'Administrador':           'ADMIN',
+    'Gestor administrativo':   'GESTOR',
+    'Docente':                 'MAESTRA',
+    'Estándar (Maestra)':      'MAESTRA',
+    'Gestor':                  'GESTOR',
   };
 
   // ── Toast UI (no requiere cambios en HTML) ──────────────────────────────────
