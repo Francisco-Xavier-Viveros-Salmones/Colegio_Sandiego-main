@@ -1,0 +1,24 @@
+@startuml
+title RF-10 (Exportar Reporte de Bitácora)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Sistema (Backend)" as Sistema
+
+autonumber
+
+Administrador -> Interfaz: Hace clic en "Exportar historial"
+Interfaz -> Sistema: Solicita exportación de los registros actuales
+Sistema -> Sistema: Recopila los registros visualizados en la tabla
+Sistema -> Sistema: Intenta procesar y generar el documento
+
+break Error de generación
+    Sistema -[#red]-> Sistema: Fallo al renderizar (error de librería o memoria)
+    Sistema --> Interfaz: Aborta el proceso y retorna error
+    Interfaz --> Administrador: Muestra alerta: "Error al generar el documento. Por favor, intente nuevamente"
+end
+
+Sistema --> Interfaz: Retorna el archivo generado
+Interfaz --> Administrador: Inicia la descarga del archivo en el equipo local
+
+@enduml

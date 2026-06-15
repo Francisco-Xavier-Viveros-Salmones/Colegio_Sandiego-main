@@ -1,0 +1,42 @@
+@startuml
+title RF-02 (Modificar permisos de acceso)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Administrador -> Interfaz: Ingresa al módulo Gestión de Usuarios
+Administrador -> Interfaz: Selecciona la cuenta del empleado
+Interfaz -> Controlador: Solicita información de la cuenta
+Controlador -> DB: Consulta estado y permisos actuales
+DB --> Controlador: Retorna datos
+
+break Selección de cuenta inactiva
+    Controlador --> Interfaz: Estado: Inactiva
+    Interfaz --> Administrador: Deshabilita opciones y muestra alerta (Debe reactivar cuenta)
+    Administrador -> Interfaz: Decide reactivar cuenta o cancelar
+end
+
+Controlador --> Interfaz: Estado: Activa + Permisos actuales
+Interfaz --> Administrador: Despliega perfil con configuración actual
+Administrador -> Interfaz: Ajusta accesos ("solo lectura" o "lectura y edición")
+Administrador -> Interfaz: Hace clic en "Guardar cambios"
+Interfaz -> Controlador: Solicita actualizar permisos
+Controlador -> Controlador: Valida la solicitud
+Controlador -> DB: Intenta guardar en la base de datos
+
+break Error de conexión al guardar
+    DB -[#red]-> Controlador: Falla la conexión / Error de BD
+    Controlador --> Interfaz: Error en la operación
+    Interfaz --> Administrador: Muestra error indicando que los cambios no se guardaron
+end
+
+DB --> Controlador: Actualización confirmada
+Controlador -> Controlador: Aplica cambios de permisos inmediatamente
+Controlador --> Interfaz: Respuesta de éxito
+Interfaz --> Administrador: Muestra mensaje de confirmación y regresa al perfil/listado
+
+@enduml

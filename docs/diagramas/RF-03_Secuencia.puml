@@ -1,0 +1,45 @@
+@startuml
+title RF-03 (Gestionar panel administrativo)
+
+actor "Gestor Administrativo" as Gestor
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Gestor -> Interfaz: Inicia sesión en el sistema
+Interfaz -> Controlador: Valida credenciales y rol
+Controlador --> Interfaz: Redirige al panel administrativo principal
+Gestor -> Interfaz: Navega por las secciones habilitadas
+
+opt Intento de acceso a funciones críticas (Excepción)
+    Gestor -> Interfaz: Intenta acceder a configuración crítica o base de datos
+    Interfaz -> Controlador: Verifica permisos de la ruta
+    Controlador --> Interfaz: Error: Permisos insuficientes
+    Interfaz --> Gestor: Muestra "Acceso denegado" y devuelve a la pantalla segura
+end
+
+== Flujo Principal (Navegación permitida) ==
+
+Gestor -> Interfaz: Realiza consultas/cotejo de información (financiera o escolar)
+Interfaz -> Controlador: Solicita información
+Controlador -> DB: Ejecuta consulta de lectura
+DB --> Controlador: Retorna datos
+Interfaz --> Gestor: Despliega información en pantalla
+
+Gestor -> Interfaz: Captura y registra un pago diario
+Interfaz -> Controlador: Envía los datos del pago
+Controlador -> DB: Procesa el pago y actualiza saldos
+DB --> Controlador: Confirmación de transacción
+Controlador --> Interfaz: Muestra actualización de saldos
+
+Gestor -> Interfaz: Solicita emitir un reporte de los datos
+Interfaz -> Controlador: Genera la petición del reporte
+Controlador -> DB: Recopila datos necesarios
+DB --> Controlador: Retorna datos consolidados
+Controlador -> Controlador: Construye el archivo de reporte
+Controlador --> Interfaz: Entrega el reporte solicitado
+Interfaz --> Gestor: Muestra reporte en pantalla o habilita descarga
+
+@enduml

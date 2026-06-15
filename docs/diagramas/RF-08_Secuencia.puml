@@ -1,0 +1,30 @@
+@startuml
+title RF-08 (Gestión de bitácora - Registro automático)
+
+actor "Usuario\n(Cualquier rol)" as Usuario
+control "Sistema (Backend)" as Sistema
+database "Base de Datos" as DB
+
+autonumber
+
+Usuario -> Sistema: Completa una acción de mutación de datos
+Sistema -> Sistema: Detecta la transacción exitosa
+
+note right of Sistema
+    Captura en segundo plano:
+    ID del usuario, fecha, hora exacta,
+    módulo afectado y tipo de cambio.
+end note
+
+Sistema -> DB: Inserta información como nuevo registro inmutable
+
+break Fallo de persistencia
+    DB -[#red]-> Sistema: Error al intentar guardar en la tabla de bitácora
+    Sistema -> DB: Ejecuta rollback (aborta) de la acción original
+    Sistema --> Usuario: Muestra error: "Error interno: No se pudo verificar la transacción de seguridad"
+end
+
+DB --> Sistema: Confirmación de inserción en bitácora
+Sistema --> Usuario: (La acción original del usuario concluye con éxito)
+
+@enduml

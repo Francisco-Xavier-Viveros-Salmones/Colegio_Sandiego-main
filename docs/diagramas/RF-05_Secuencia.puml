@@ -1,0 +1,31 @@
+@startuml
+title RF-05 (Cerrar sesión manualmente)
+
+actor "Usuario\n(Admin/Gestor/Docente)" as Usuario
+boundary "Interfaz (Navegador)" as Interfaz
+control "Controlador (Backend)" as Controlador
+
+autonumber
+
+Usuario -> Interfaz: Navega en cualquier pantalla
+Usuario -> Interfaz: Hace clic en "Cerrar sesión"
+Interfaz -> Controlador: Envía solicitud de terminación de sesión
+
+break Error de red durante el cierre
+    Controlador -[#red]-> Interfaz: Falla de conexión (timeout)
+    note right of Interfaz
+        Por seguridad, el sistema
+        elimina la sesión localmente.
+    end note
+    Interfaz -> Interfaz: Limpia datos temporales del navegador
+    Interfaz --> Usuario: Redirige a pantalla de inicio de sesión (Login)
+    ... Una vez restablecida la red ...
+    Interfaz -> Controlador: Sincroniza invalidación del token
+end
+
+Controlador -> Controlador: Invalida el token de autenticación
+Controlador -> Controlador: Elimina datos temporales de la sesión activa
+Controlador --> Interfaz: Confirma cierre de sesión
+Interfaz --> Usuario: Redirige a pantalla principal de inicio de sesión (Login)
+
+@enduml

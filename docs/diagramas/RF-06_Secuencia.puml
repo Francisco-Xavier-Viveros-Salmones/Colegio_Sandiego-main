@@ -1,0 +1,37 @@
+@startuml
+title RF-06 (Eliminar cuenta de colaborador)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Administrador -> Interfaz: Ingresa al módulo Gestión de Usuarios
+Administrador -> Interfaz: Busca usuario por nombre o filtra por rol
+Interfaz --> Administrador: Muestra la cuenta correspondiente en el listado
+Administrador -> Interfaz: Selecciona la cuenta y hace clic en "Eliminar"
+
+Interfaz -> Controlador: Verifica si la cuenta seleccionada es la del usuario activo
+
+break Intento de eliminar la propia cuenta
+    Controlador --> Interfaz: Coincidencia detectada (es el mismo usuario)
+    Interfaz --> Administrador: Alerta: "Acción denegada: No puede eliminar su propia cuenta activa"
+end
+
+Interfaz --> Administrador: Despliega cuadro de diálogo de confirmación
+
+break Cancelación de la operación
+    Administrador -> Interfaz: Hace clic en "Cancelar"
+    Interfaz --> Administrador: Cierra cuadro de diálogo sin realizar cambios
+end
+
+Administrador -> Interfaz: Hace clic en "Confirmar"
+Interfaz -> Controlador: Envía solicitud de baja
+Controlador -> DB: Ejecuta baja lógica/física y revoca accesos
+DB --> Controlador: Confirmación de la operación
+Controlador --> Interfaz: Respuesta exitosa
+Interfaz --> Administrador: Muestra mensaje de éxito y actualiza la lista
+
+@enduml

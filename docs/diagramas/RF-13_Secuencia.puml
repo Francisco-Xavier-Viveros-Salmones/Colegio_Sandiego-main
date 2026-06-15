@@ -1,0 +1,42 @@
+@startuml
+title RF-13 (Consultar expediente de alumno)
+
+actor "Admin / Gestor" as Admin
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Admin -> Interfaz: Ingresa al módulo Gestión de Alumnos
+Admin -> Interfaz: Se ubica en la barra de búsqueda
+Admin -> Interfaz: Ingresa parámetro (nombre, matrícula o CURP)
+Admin -> Interfaz: Ejecuta la búsqueda
+Interfaz -> Controlador: Solicita consulta de alumno
+Controlador -> DB: Consulta registros coincidentes
+DB --> Controlador: Retorna resultados de búsqueda
+
+break Búsqueda sin resultados
+    Controlador --> Interfaz: 0 coincidencias
+    Interfaz --> Admin: Alerta: "No se encontraron resultados para la búsqueda solicitada"
+    note right of Admin
+        El actor limpia la barra de búsqueda
+        y vuelve a intentar (Regresa al paso 3).
+    end note
+end
+
+Controlador --> Interfaz: Lista de coincidencias
+Interfaz --> Admin: Despliega lista de resultados
+Admin -> Interfaz: Selecciona el expediente deseado
+Interfaz -> Controlador: Solicita cargar expediente completo
+Controlador -> DB: Consulta datos del alumno y tutor
+DB --> Controlador: Retorna información detallada
+Controlador --> Interfaz: Envía datos a la vista
+
+alt Alumno inactivo o dado de baja
+    Interfaz --> Admin: Despliega vista detallada resaltando "INACTIVO" o "BAJA" en rojo
+else Alumno activo (Flujo Principal)
+    Interfaz --> Admin: Despliega vista detallada normal con todos los datos
+end
+
+@enduml

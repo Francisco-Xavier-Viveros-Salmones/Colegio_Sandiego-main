@@ -1,0 +1,38 @@
+@startuml
+title RF-01 (Crear cuenta para un nuevo colaborador)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Administrador -> Interfaz: Ingresa al módulo Gestión de Usuarios
+Administrador -> Interfaz: Selecciona crear nueva cuenta
+Interfaz --> Administrador: Despliega formulario de registro
+Administrador -> Interfaz: Ingresa nombre, rol y contraseña
+Administrador -> Interfaz: Hace clic en "Guardar"
+Interfaz -> Controlador: Envía datos para validación
+
+Controlador -> Controlador: Valida la información
+
+break Datos incompletos
+    Controlador --> Interfaz: Error: Datos faltantes
+    Interfaz --> Administrador: Resalta campo faltante y muestra alerta (campos obligatorios)
+end
+
+Controlador -> DB: Consulta existencia de usuario
+
+break Usuario duplicado
+    DB --> Controlador: El usuario ya existe
+    Controlador --> Interfaz: Error: Registro duplicado
+    Interfaz --> Administrador: Advierte duplicado y pide usar un identificador distinto
+end
+
+DB --> Controlador: El usuario no existe (OK)
+Controlador -> DB: Crea cuenta y habilita acceso con permisos
+DB --> Controlador: Confirmación de guardado
+Controlador --> Interfaz: Respuesta de éxito
+Interfaz --> Administrador: Muestra mensaje de éxito y regresa a lista de usuarios
+@enduml

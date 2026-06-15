@@ -1,0 +1,50 @@
+@startuml
+title RF-12 (Modificar datos de alumno o tutor)
+
+actor "Admin / Gestor" as Admin
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Admin -> Interfaz: Ingresa al módulo Gestión de Alumnos
+Admin -> Interfaz: Busca al alumno por nombre o matrícula
+Interfaz -> Controlador: Solicita búsqueda de alumno
+Controlador -> DB: Consulta registros coincidentes
+DB --> Controlador: Retorna resultados
+Controlador --> Interfaz: Envía lista de resultados
+Interfaz --> Admin: Muestra listado de alumnos encontrados
+Admin -> Interfaz: Selecciona el expediente deseado de la lista
+Admin -> Interfaz: Hace clic en "Editar" o "Modificar datos"
+Interfaz -> Controlador: Solicita cargar formulario de edición
+Controlador -> DB: Recupera expediente y tutor vinculado
+DB --> Controlador: Retorna datos completos
+Controlador --> Interfaz: Envía datos precargados
+Interfaz --> Admin: Habilita campos con la información actual precargada
+
+break Cancelación de la edición
+    Admin -> Interfaz: Decide no aplicar cambios y hace clic en "Cancelar"
+    Interfaz --> Admin: Descarta cambios en pantalla y devuelve a la vista detallada original
+end
+
+Admin -> Interfaz: Ingresa la información corregida o actualizada (alumno o tutor)
+Admin -> Interfaz: Hace clic en "Guardar cambios"
+Interfaz -> Controlador: Envía datos modificados para validación
+Controlador -> Controlador: Valida que los nuevos datos sean correctos y no falte información obligatoria
+
+break Dato obligatorio eliminado o inválido
+    Controlador --> Interfaz: Error de validación (campo vacío o formato inválido)
+    Interfaz --> Admin: Detiene la actualización, resalta el campo erróneo en rojo y muestra alerta
+    note right of Admin
+        El actor corrige el dato
+        y vuelve a intentar guardar.
+    end note
+end
+
+Controlador -> DB: Actualiza la base de datos de forma inmediata
+DB --> Controlador: Confirmación de actualización exitosa
+Controlador --> Interfaz: Retorna respuesta de éxito (los cambios se reflejan en el sistema)
+Interfaz --> Admin: Muestra mensaje: "Datos actualizados correctamente"
+
+@enduml

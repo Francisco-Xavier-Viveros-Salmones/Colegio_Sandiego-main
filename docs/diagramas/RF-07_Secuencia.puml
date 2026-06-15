@@ -1,0 +1,34 @@
+@startuml
+title RF-07 (Consultar listado de usuarios)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Administrador -> Interfaz: Hace clic para ingresar al módulo Gestión de Usuarios
+Interfaz -> Controlador: Solicita listado general de usuarios
+Controlador -> DB: Consulta usuarios en BD (sin parámetros iniciales)
+
+break Error de carga o pérdida de conexión
+    DB -[#red]-> Controlador: Falla de conexión a la base de datos
+    Controlador --> Interfaz: Retorna error de servidor/red
+    Interfaz --> Administrador: Muestra error: "No se pudo cargar el listado de usuarios..."
+    note right of Administrador
+        El Administrador recarga la
+        página o vuelve a intentar.
+    end note
+end
+
+DB --> Controlador: Retorna registros de todos los usuarios
+Controlador --> Interfaz: Envía datos estructurados al frontend
+Interfaz --> Administrador: Despliega en pantalla tabla con usuarios registrados
+note right of Administrador
+    Visualiza estructuradamente:
+    nombre, rol, estado de cuenta
+    y fecha/hora de último acceso.
+end note
+
+@enduml

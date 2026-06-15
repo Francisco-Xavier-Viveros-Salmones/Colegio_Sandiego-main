@@ -1,0 +1,44 @@
+@startuml
+title RF-04 (Consultar datos básicos de alumno)
+
+actor Docente
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Docente -> Interfaz: Navega a la sección de consulta de alumnos
+Docente -> Interfaz: Ingresa criterio (nombre, grado o grupo)
+Docente -> Interfaz: Ejecuta la búsqueda
+Interfaz -> Controlador: Envía solicitud de búsqueda
+Controlador -> DB: Consulta en la base de datos
+DB --> Controlador: Retorna registros encontrados
+
+break Búsqueda sin resultados
+    Controlador --> Interfaz: Lista vacía (0 coincidencias)
+    Interfaz --> Docente: Muestra: "No se encontraron alumnos con los criterios proporcionados"
+    note right of Docente
+        El Docente modifica los parámetros
+        de búsqueda y vuelve a intentar.
+    end note
+end
+
+Controlador --> Interfaz: Lista de alumnos coincidentes
+Interfaz --> Docente: Despliega la lista de resultados
+Docente -> Interfaz: Selecciona el perfil del alumno deseado
+Interfaz -> Controlador: Solicita cargar el expediente del alumno
+Controlador -> DB: Recupera datos del alumno
+DB --> Controlador: Retorna expediente completo
+
+note right of Controlador
+    Se aplica la regla de negocio:
+    Filtrar y ocultar datos financieros,
+    pagos y RFC.
+end note
+
+Controlador -> Controlador: Prepara vista con datos básicos permitidos
+Controlador --> Interfaz: Envía únicamente la información filtrada
+Interfaz --> Docente: Muestra en pantalla el nombre, grado, grupo y personas autorizadas
+
+@enduml

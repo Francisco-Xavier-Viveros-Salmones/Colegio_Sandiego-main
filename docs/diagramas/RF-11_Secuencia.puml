@@ -1,0 +1,54 @@
+@startuml
+title RF-11 (Modificar datos de padre o tutor)
+
+actor "Admin / Gestor" as Admin
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Admin -> Interfaz: Ingresa al módulo Gestión de Padres/Tutores
+Admin -> Interfaz: Busca al tutor por nombre completo o RFC
+Interfaz -> Controlador: Solicita información del tutor
+Controlador -> DB: Consulta registro
+DB --> Controlador: Retorna datos
+Controlador --> Interfaz: Envía información
+Interfaz --> Admin: Despliega perfil del tutor con información actual
+Admin -> Interfaz: Hace clic en "Editar datos"
+Interfaz --> Admin: Habilita campos con los datos actuales precargados
+
+break Cancelación de la edición
+    Admin -> Interfaz: Hace clic en "Cancelar"
+    Interfaz --> Admin: Descarta cambios y regresa a la vista detallada (sin alterar BD)
+end
+
+Admin -> Interfaz: Actualiza datos (contacto o fiscales)
+Admin -> Interfaz: Hace clic en "Guardar cambios"
+Interfaz -> Controlador: Envía datos para actualizar
+Controlador -> Controlador: Valida campos obligatorios y formato
+Controlador -> DB: Verifica duplicidad o validez del RFC
+
+break RFC inválido o duplicado
+    DB --> Controlador: Resultado (RFC ya registrado)
+    Controlador --> Interfaz: Error de validación
+    Interfaz --> Admin: Alerta: "El RFC ingresado no es válido o ya está registrado..."
+    note right of Admin
+        El actor corrige el dato
+        y vuelve a intentar guardar.
+    end note
+end
+
+Controlador -> DB: Ejecuta la actualización del perfil
+
+break Error de conexión al guardar
+    DB -[#red]-> Controlador: Pérdida de conexión con la base de datos
+    Controlador --> Interfaz: Error de servidor
+    Interfaz --> Admin: Alerta: "Los cambios no pudieron guardarse. Verifique la conexión..."
+end
+
+DB --> Controlador: Confirmación de actualización
+Controlador --> Interfaz: Respuesta exitosa
+Interfaz --> Admin: Muestra mensaje: "Datos del tutor actualizados correctamente"
+
+@enduml

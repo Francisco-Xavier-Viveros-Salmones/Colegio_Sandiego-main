@@ -1,0 +1,38 @@
+@startuml
+title RF-09 (Consultar historial de bitácora)
+
+actor Administrador
+boundary "Interfaz (Panel)" as Interfaz
+control "Controlador (Backend)" as Controlador
+database "Base de Datos" as DB
+
+autonumber
+
+Administrador -> Interfaz: Ingresa al módulo de "Seguridad y Bitácora"
+Interfaz -> Controlador: Solicita historial de movimientos
+Controlador -> DB: Consulta registros en la tabla de bitácora
+
+note right of DB
+    Aplica ordenamiento cronológico
+    descendente (más recientes primero)
+end note
+
+break Base de datos sin actividad
+    DB --> Controlador: Retorna lista vacía (0 registros)
+    Controlador --> Interfaz: Envía respuesta sin datos
+    Interfaz --> Administrador: Muestra estructura de tabla vacía con mensaje:\n"Aún no hay registros de actividad en la plataforma"
+end
+
+DB --> Controlador: Retorna historial completo
+Controlador --> Interfaz: Envía datos estructurados
+Interfaz --> Administrador: Despliega en pantalla la tabla con el historial de movimientos
+
+opt Punto de Extensión: Exportar historial
+    Administrador -> Interfaz: Hace clic en el botón "Exportar"
+    note right of Interfaz
+        El flujo se pausa y deriva al caso de uso:
+        "Exportar Reporte de Bitácora"
+    end note
+end
+
+@enduml
