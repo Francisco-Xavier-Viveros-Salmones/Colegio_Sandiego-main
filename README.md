@@ -70,7 +70,7 @@ El servidor estará disponible en: `http://localhost:3000`
 ## Credenciales de prueba
 
 | Rol     | Usuario          | Contraseña   |
-|---------|-----------------|--------------|
+|---------|-----------------|---------------|
 | ADMIN   | elizabeth.admin  | sandiego2026 |
 | ADMIN   | maria.directora  | sandiego2026 |
 | GESTOR  | gestor.admin     | sandiego2026 |

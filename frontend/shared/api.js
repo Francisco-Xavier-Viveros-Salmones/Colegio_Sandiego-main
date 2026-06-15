@@ -86,7 +86,7 @@
     var token   = getToken();
     if (token) headers['Authorization'] = 'Bearer ' + token;
 
-    var opts = { method: method, headers: headers };
+    var opts = { method: method, headers: headers, cache: 'no-cache' };
     if (body !== undefined && body !== null) {
       opts.body = JSON.stringify(body);
     }
@@ -234,7 +234,7 @@
       }
     },
     descargarComprobante: function(pagoId) {
-      return getBase() + '/pagos/' + pagoId + '/comprobante'; // Para <a> href directo o fetch
+      return getBase() + '/pagos/' + pagoId + '/comprobante?token=' + getToken();
     }
   };
 
@@ -368,6 +368,9 @@
    */
   function mapAlumno(a) {
     var primerPadre = (a.padres && a.padres.length > 0) ? a.padres[0] : null;
+    var nivelStr = a.nivel || (a.grupo ? a.grupo.nivel : null);
+    var gradoStr = (a.grupo && a.grupo.grado) ? a.grupo.grado.toString() : null;
+    var seccionStr = a.grupo ? a.grupo.seccion : null;
     return {
       id:               a.id || a.alumnoId,
       grupoId:          a.grupoId,
@@ -375,6 +378,15 @@
       matricula:        a.matricula,
       curp:             a.curp || '',
       activo:           a.activo,
+      estado:           a.estado,
+      nivel:            nivelStr,
+      grado:            gradoStr,
+      seccion:          seccionStr,
+      fechaNacimiento:  a.fechaNacimiento,
+      sexo:             a.sexo,
+      diaLimitePago:    a.diaLimitePago,
+      observaciones:    a.observaciones,
+      personasAutorizadas: a.personasAutorizadas,
       grupo:            a.grupo ? a.grupo.nombre : 'Sin grupo asignado',
       padre:            primerPadre ? primerPadre.nombre : 'No registrado',
       telefono:         primerPadre ? (primerPadre.telefono || 'N/D') : 'N/D',
@@ -419,6 +431,8 @@
       fecha:    p.fecha ? p.fecha.slice(0, 10) : '',
       monto:    p.monto,
       recargo:  p.tieneRecargo,
+      metodoPago: p.metodoPago || '',
+      documentos: p.documentos || [],
     };
   }
 

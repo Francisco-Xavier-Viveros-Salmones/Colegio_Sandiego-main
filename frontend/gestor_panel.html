@@ -554,8 +554,8 @@
         </div>
         <!-- Tipo de Pago -->
         <div class="flex gap-2 mb-4" x-show="nuevoPago.alumno">
-          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'normal' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'normal'">Pago Normal</button>
-          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'adelantado' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'adelantado'">Pago Adelantado</button>
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'normal' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'normal'; autofillMonto()">Pago Normal</button>
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'adelantado' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'adelantado'; calcularAdelanto()">Pago Adelantado</button>
         </div>
 
         <div x-show="nuevoPago.tipoPago === 'normal'">
@@ -570,7 +570,7 @@
 
         <div x-show="nuevoPago.tipoPago === 'adelantado'">
           <label class="text-xs font-medium text-gray-600">Meses a adelantar</label>
-          <input type="number" class="input-modern" min="1" max="12" x-model="nuevoPago.mesesAdelantar">
+          <input type="number" class="input-modern" min="1" max="12" x-model="nuevoPago.mesesAdelantar" @input="calcularAdelanto()">
         </div>
 
         <div>
@@ -954,9 +954,13 @@
         this.mostrarSugerenciasPago = false;
         this.pagoCoincidencias      = [];
         this.pagoAdeudos            = [];
+        this.alumnoPagoInfo         = null;
         
         this.pagoCalculando = true;
         try {
+          const alRes = await window.saeApi.alumnos.obtener(al.id);
+          if (alRes.ok && alRes.data) this.alumnoPagoInfo = alRes.data;
+
           const res = await window.saeApi.pagos.calendario({ alumnoId: al.id, estadoCobro: 'pendiente' });
           if (res.ok && res.data) {
             this.pagoAdeudos = res.data;
@@ -1015,6 +1019,42 @@
         } else {
           window.saeApi.toast('error', res.message || 'Error al modificar el recargo.');
         }
+      },
+      calcularAdelanto() {
+        if (!this.nuevoPago.alumnoId) return;
+        const numMeses = parseInt(this.nuevoPago.mesesAdelantar) || 1;
+        
+        let montoMensual = 0;
+        if (this.alumnoPagoInfo?.planPago?.montoMensual) {
+           montoMensual = Number(this.alumnoPagoInfo.planPago.montoMensual);
+        }
+        
+        const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
+        const aAdelantar = colegiaturas.slice(0, numMeses);
+        let total = 0;
+        
+        for (const deud of aAdelantar) {
+          let cobro = Number(deud.montoOriginal);
+          const recargo = Number(deud.montoRecargo) || 0;
+          const pagado = Number(deud.montoPagado) || 0;
+          total += Math.max(0, (cobro + recargo) - pagado);
+        }
+        
+        const faltantes = numMeses - aAdelantar.length;
+        if (faltantes > 0 && montoMensual > 0) {
+           total += (faltantes * montoMensual);
+        }
+        
+        this.nuevoPago.monto = total.toFixed(2);
+      },
+      autofillMonto() {
+        if (!this.pagoAdeudos || this.pagoAdeudos.length === 0) return;
+        let total = 0;
+        this.pagoAdeudos.forEach(d => {
+          const deuda = Number(d.montoOriginal) + Number(d.montoRecargo) - Number(d.montoPagado);
+          total += Math.max(0, deuda);
+        });
+        this.nuevoPago.monto = total.toFixed(2);
       },
       async agregarPago() {
         if (!this.nuevoPago.alumnoId) {

@@ -50,6 +50,11 @@ function mapPago(p) {
       montoAplicado:  Number(ap.montoAplicado),
       aplicadoA:      ap.aplicadoA,
     })),
+    documentos: (p.documentos ?? []).map(d => ({
+      id: d.documentoId,
+      nombre: d.nombreOriginal,
+      ruta: d.rutaAlmacen
+    })),
     createdAt: p.registradoEn,
   };
 }
@@ -62,6 +67,9 @@ const INCLUDE_COMPLETO = {
   },
   registradoPorUsuario: {
     select: { usuarioId: true, nombreCompleto: true },
+  },
+  documentos: {
+    select: { documentoId: true, nombreOriginal: true, rutaAlmacen: true },
   },
   aplicaciones: {
     include: {
@@ -177,11 +185,13 @@ async function create(datos, auditCtx = {}) {
     tutorId, calendarioPagoId,
   } = datos;
 
-  const conceptoNorm = (concepto || 'otro').toLowerCase()
-    .replace('colegiatura', 'colegiatura')
-    .replace('inscripcion', 'inscripcion')
-    .replace('material_didactico', 'material')
-    .replace('uniforme', 'uniforme');
+  const strConcepto = (concepto || 'otro').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  let conceptoNorm = strConcepto;
+  if (strConcepto.includes('material')) conceptoNorm = 'material';
+  else if (strConcepto.includes('inscripcion')) conceptoNorm = 'inscripcion';
+  else if (strConcepto.includes('colegiatura')) conceptoNorm = 'colegiatura';
+  else if (strConcepto.includes('uniforme')) conceptoNorm = 'uniforme';
+  else if (strConcepto.includes('total')) conceptoNorm = 'total';
 
   const { withAudit } = require('../../utils/audit.utils');
   const pago = await withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
@@ -217,7 +227,7 @@ async function create(datos, auditCtx = {}) {
         estadoCobro: { not: 'pagado' },
         eliminadoEn: null,
       };
-      if (conceptoNorm !== 'otro') {
+      if (conceptoNorm !== 'otro' && conceptoNorm !== 'total') {
         whereClause.concepto = conceptoNorm;
       }
 
