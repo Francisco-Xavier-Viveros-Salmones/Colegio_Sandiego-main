@@ -50,6 +50,11 @@ function mapPago(p) {
       montoAplicado:  Number(ap.montoAplicado),
       aplicadoA:      ap.aplicadoA,
     })),
+    documentos: (p.documentos ?? []).map(d => ({
+      id: d.documentoId,
+      nombre: d.nombreOriginal,
+      ruta: d.rutaAlmacen
+    })),
     createdAt: p.registradoEn,
   };
 }
@@ -62,6 +67,9 @@ const INCLUDE_COMPLETO = {
   },
   registradoPorUsuario: {
     select: { usuarioId: true, nombreCompleto: true },
+  },
+  documentos: {
+    select: { documentoId: true, nombreOriginal: true, rutaAlmacen: true },
   },
   aplicaciones: {
     include: {
@@ -177,11 +185,13 @@ async function create(datos, auditCtx = {}) {
     tutorId, calendarioPagoId,
   } = datos;
 
-  const conceptoNorm = (concepto || 'otro').toLowerCase()
-    .replace('colegiatura', 'colegiatura')
-    .replace('inscripcion', 'inscripcion')
-    .replace('material_didactico', 'material')
-    .replace('uniforme', 'uniforme');
+  const strConcepto = (concepto || 'otro').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  let conceptoNorm = strConcepto;
+  if (strConcepto.includes('material')) conceptoNorm = 'material';
+  else if (strConcepto.includes('inscripcion')) conceptoNorm = 'inscripcion';
+  else if (strConcepto.includes('colegiatura')) conceptoNorm = 'colegiatura';
+  else if (strConcepto.includes('uniforme')) conceptoNorm = 'uniforme';
+  else if (strConcepto.includes('total')) conceptoNorm = 'total';
 
   const { withAudit } = require('../../utils/audit.utils');
   const pago = await withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
@@ -217,7 +227,7 @@ async function create(datos, auditCtx = {}) {
         estadoCobro: { not: 'pagado' },
         eliminadoEn: null,
       };
-      if (conceptoNorm !== 'otro') {
+      if (conceptoNorm !== 'otro' && conceptoNorm !== 'total') {
         whereClause.concepto = conceptoNorm;
       }
 
@@ -368,7 +378,7 @@ async function findCalendario({ alumnoId, cicloId, estadoCobro } = {}) {
   return prisma.calendarioPago.findMany({
     where,
     include: {
-      recargos: { where: { estado: 'aplicado' } },
+      recargos: { where: { estado: { in: ['aplicado', 'modificado'] } } },
       alumno: {
         select: {
           asignacionesBeca: {
@@ -382,4 +392,100 @@ async function findCalendario({ alumnoId, cicloId, estadoCobro } = {}) {
   });
 }
 
-module.exports = { findAll, findById, create, sumaByAlumno, findCalendario };
+/**
+ * Crea un pago por adelantado (para N meses de colegiatura).
+ */
+async function createAdelantado(datos, periodos, auditCtx = {}) {
+  const {
+    alumnoId, tutorId, montoTotal, metodoPago, fecha, registradoPorId
+  } = datos;
+
+  const { withAudit } = require('../../utils/audit.utils');
+  const pago = await withAudit(auditCtx.usuarioId, auditCtx.ip, async (tx) => {
+    
+    // 1. Resolver tutorId si no viene explícito
+    let tId = tutorId ? Number(tutorId) : null;
+    if (!tId && alumnoId) {
+      const alumno = await tx.alumno.findUnique({ where: { alumnoId: Number(alumnoId) }, select: { tutores: true } });
+      if (alumno && alumno.tutores && alumno.tutores.length > 0) {
+        tId = alumno.tutores[0].tutorId;
+      }
+    }
+
+    // 2. Crear el pago principal
+    const nuevoPago = await tx.pago.create({
+      data: {
+        alumnoId:      Number(alumnoId),
+        tutorId:       tId,
+        fechaPago:     new Date(fecha),
+        montoTotal:    montoTotal,
+        metodoPago:    metodoPago ?? 'efectivo',
+        observaciones: `Pago adelantado de colegiaturas (${periodos.length} meses)`,
+        registradoPor: registradoPorId ? Number(registradoPorId) : null,
+      },
+    });
+
+    // 3. Aplicar pago a los periodos y marcarlos como pagados
+    let cicloIdsAfectados = new Set();
+    for (const periodo of periodos) {
+      // Registrar aplicación del pago a capital
+      await tx.aplicacionPago.create({
+        data: {
+          pagoId:           nuevoPago.pagoId,
+          calendarioPagoId: periodo.calendarioPagoId,
+          montoAplicado:    periodo.montoCobrado,
+          aplicadoA:        'capital',
+        },
+      });
+
+      // Si había beca que reducía el monto original, debemos actualizar el montoOriginal
+      if (periodo.montoOriginal !== periodo.montoCobrado) {
+         await tx.calendarioPago.update({
+           where: { calendarioPagoId: periodo.calendarioPagoId },
+           data: { montoOriginal: periodo.montoCobrado }
+         });
+      }
+
+      // Marcar periodo como pagado
+      await tx.calendarioPago.update({
+        where: { calendarioPagoId: periodo.calendarioPagoId },
+        data: {
+          montoPagado: periodo.montoCobrado,
+          estadoCobro: 'pagado',
+          liquidadoAt: new Date(),
+        },
+      });
+      
+      if (periodo.cicloId) cicloIdsAfectados.add(periodo.cicloId);
+    }
+
+    // 4. Actualizar meses de adeudo en inscripciones
+    for (const cId of Array.from(cicloIdsAfectados)) {
+      // Re-calcular los meses de adeudo para este ciclo
+      const mesesDeudaCount = await tx.calendarioPago.count({
+        where: {
+          alumnoId: Number(alumnoId),
+          cicloId: cId,
+          concepto: 'colegiatura',
+          estadoCobro: { not: 'pagado' },
+          fechaVencimiento: { lt: new Date() }, // Vencidos
+          eliminadoEn: null
+        }
+      });
+      
+      await tx.inscripcionCiclo.updateMany({
+        where: { 
+          alumnoId: Number(alumnoId), 
+          cicloId: cId
+        },
+        data: { mesesAdeudo: mesesDeudaCount }
+      });
+    }
+
+    return nuevoPago;
+  });
+
+  return findById(pago.pagoId);
+}
+
+module.exports = { findAll, findById, create, sumaByAlumno, findCalendario, createAdelantado };

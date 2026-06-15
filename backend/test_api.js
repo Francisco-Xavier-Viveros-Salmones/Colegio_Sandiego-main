@@ -1,13 +1,26 @@
-async function main() {
-  const loginRes = await fetch('http://localhost:3000/api/v1/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@colegiosandiego.edu.mx', password: 'admin' })
+const { request } = require('http');
+
+async function test() {
+  const token = process.argv[2];
+  if (!token) {
+    console.log("No token provided");
+    return;
+  }
+  
+  const req = request({
+    hostname: 'localhost',
+    port: 3000,
+    path: '/api/v1/pagos?alumnoId=1',
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  }, res => {
+    let data = '';
+    res.on('data', chunk => data += chunk);
+    res.on('end', () => console.log(data));
   });
-  const { data: { token } } = await loginRes.json();
-  const res = await fetch('http://localhost:3000/api/v1/alumnos/16', {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  console.log(await res.json());
+  req.on('error', console.error);
+  req.end();
 }
-main();
+test();

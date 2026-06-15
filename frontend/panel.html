@@ -7,7 +7,7 @@
 <!-- SAE: config dinámica (IP del servidor) + guard de sesión + cliente API -->
 <script src="/config.js"></script>
 <script src="/shared/auth-guard.js"></script>
-<script src="/shared/api.js?v=2"></script>
+<script src="/shared/api.js?v=3"></script>
 <!-- Indicador de conectividad LAN (chip rojo discreto cuando el servidor no responde) -->
 <script src="/shared/offline-indicator.js"></script>
 <!-- Librerías visuales -->
@@ -362,6 +362,7 @@
                   <button class="px-4 py-3 text-sm font-medium" :class="tabAlumnoFicha==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='academicos'">Expediente Escolar</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='tutores'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia / Tutores</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='planes_pago'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='planes_pago'"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Plan de Pago</button>
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='historial_pagos'; _cargarPagosAlumnoFicha()"><i data-lucide="receipt" class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
                 </div>
                 <!-- Pestaña: Expediente Escolar -->
                 <div class="p-5 space-y-4" x-show="tabAlumnoFicha==='academicos'">
@@ -429,13 +430,19 @@
                         <button class="btn-outline text-amber-600 border-amber-200" @click="cambiarEstadoAlumno('Baja Temporal')">Dar Baja Temporal</button>
                       </template>
                       <template x-if="alumnoActualFicha?.estado === 'Baja Temporal'">
-                        <div class="flex gap-2">
-                          <button class="btn-outline text-emerald-600 border-emerald-200" @click="cambiarEstadoAlumno('Activo')">Reactivar</button>
-                          <button class="btn-outline text-crimson-600 border-crimson-200" @click="confirmarBajaDefinitiva()">Dar Baja Definitiva</button>
+                        <div class="flex flex-col gap-2">
+                          <span class="text-xs text-amber-600 font-medium" x-show="alumnoActualFicha?.observaciones" x-text="alumnoActualFicha.observaciones.split('\\n').pop()"></span>
+                          <div class="flex gap-2">
+                            <button class="btn-outline text-emerald-600 border-emerald-200" @click="cambiarEstadoAlumno('Activo')">Reactivar</button>
+                            <button class="btn-outline text-crimson-600 border-crimson-200" @click="confirmarBajaDefinitiva()">Dar Baja Definitiva</button>
+                          </div>
                         </div>
                       </template>
                       <template x-if="alumnoActualFicha?.estado === 'Baja Definitiva'">
-                        <span class="text-xs font-bold text-crimson-600">Expediente Cerrado (Baja Definitiva)</span>
+                        <div class="flex flex-col">
+                          <span class="text-xs font-bold text-crimson-600">Expediente Cerrado (Baja Definitiva)</span>
+                          <span class="text-xs text-crimson-500 mt-1" x-show="alumnoActualFicha?.observaciones" x-text="alumnoActualFicha.observaciones.split('\\n').pop()"></span>
+                        </div>
                       </template>
                     </div>
                     <button class="btn-primary" x-show="alumnoActualFicha?.estado !== 'Baja Definitiva'" @click="guardarCambiosAlumno()">Guardar Expediente</button>
@@ -514,6 +521,55 @@
                       <button class="btn-outline" @click="previewPlanCalendario = []">Cancelar</button>
                       <button class="btn-primary" @click="asignarPlanPagoConfirmar()" :disabled="cargando">Confirmar y Asignar Plan</button>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Pestaña: Historial de Pagos -->
+                <div class="p-5 space-y-4" x-show="tabAlumnoFicha==='historial_pagos'">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-700">Historial de Pagos del Alumno</h3>
+                    <button class="btn-outline text-xs" @click="_cargarPagosAlumnoFicha()"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-600">
+                      <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                        <tr>
+                          <th class="px-4 py-3 rounded-tl-lg">Fecha</th>
+                          <th class="px-4 py-3">Concepto</th>
+                          <th class="px-4 py-3">Método</th>
+                          <th class="px-4 py-3">Monto</th>
+                          <th class="px-4 py-3 text-center rounded-tr-lg">Comprobante</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <template x-for="pago in historialPagosAlumno" :key="pago.id">
+                          <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="px-4 py-3 font-medium text-gray-900" x-text="pago.fecha.split('T')[0]"></td>
+                            <td class="px-4 py-3" x-text="pago.concepto + (pago.recargo ? ' (con recargo)' : '')"></td>
+                            <td class="px-4 py-3" x-text="pago.metodoPago"></td>
+                            <td class="px-4 py-3 text-emerald-600 font-semibold" x-text="'$' + pago.monto"></td>
+                            <td class="px-4 py-3 text-center">
+                              <template x-if="pago.documentos && pago.documentos.length > 0">
+                                <a :href="window.saeApi.pagos.descargarComprobante(pago.id)" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-medium inline-flex items-center" title="Ver Comprobante">
+                                  <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> Ver
+                                </a>
+                              </template>
+                              <template x-if="!pago.documentos || pago.documentos.length === 0">
+                                <label class="cursor-pointer text-xs text-navy-600 hover:text-navy-800 font-medium inline-flex items-center">
+                                  <i data-lucide="upload" class="w-4 h-4 mr-1"></i> Subir
+                                  <input type="file" class="hidden" accept=".pdf,.jpg,.jpeg,.png" @change="subirComprobanteHistorial(pago.id, $event)">
+                                </label>
+                              </template>
+                            </td>
+                          </tr>
+                        </template>
+                        <tr x-show="historialPagosAlumno.length === 0">
+                          <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            No hay pagos registrados para este alumno.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               </div>
@@ -1245,13 +1301,18 @@
         <!-- Autocompletado de alumno -->
         <div>
           <label class="text-xs font-medium text-gray-600">Alumno</label>
-          <div class="autocomplete-wrapper" @click.outside="mostrarSugerenciasPago=false">
-            <input type="text" class="input-modern"
+          <div class="autocomplete-wrapper relative" @click.outside="mostrarSugerenciasPago=false">
+            <input type="text" class="input-modern pr-8"
                    placeholder="Escribe el nombre o matrícula del alumno..."
                    x-model="busquedaPagoAlumno"
                    @input="filtrarPagoAlumnos()"
                    @focus="filtrarPagoAlumnos(); mostrarSugerenciasPago=true"
                    autocomplete="off">
+            <button x-show="busquedaPagoAlumno.length > 0"
+                    @click="limpiarSeleccionPago()"
+                    class="absolute right-2 top-[38px] transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
             <div class="autocomplete-list"
                  x-show="mostrarSugerenciasPago && busquedaPagoAlumno.length > 0">
               <template x-for="al in pagoCoincidencias" :key="al.matricula">
@@ -1287,20 +1348,45 @@
                 <div class="text-right">
                   <div class="font-bold text-crimson-600" x-text="'$' + (Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado)).toFixed(2)"></div>
                   <div x-show="Number(adeudo.montoRecargo) > 0" class="text-[10px] text-amber-600" x-text="'Incluye recargo: $' + adeudo.montoRecargo"></div>
+                  <!-- Mostrar recargos editables -->
+                  <template x-if="adeudo.recargos && adeudo.recargos.length > 0">
+                    <div class="mt-1 space-y-1">
+                      <template x-for="recargo in adeudo.recargos" :key="recargo.recargoId">
+                        <div class="flex items-center justify-end gap-1 text-[10px] text-amber-700 bg-amber-50 p-1 rounded hover:bg-amber-100 transition-colors" @click.stop="iniciarEdicionRecargo(recargo)">
+                          <span x-text="(recargo.estado === 'condonado' ? 'Condonado' : 'Recargo') + ': $' + Number(recargo.montoActual).toFixed(2)"></span>
+                          <button type="button" class="text-amber-800 hover:text-amber-900" title="Modificar recargo">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                          </button>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
                 </div>
               </div>
             </template>
           </div>
         </div>
 
-        <div>
+        <div class="flex gap-2 mb-4 mt-2">
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'normal' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'normal'; autofillMonto()">Pago Normal</button>
+          <button class="btn-outline flex-1" :class="nuevoPago.tipoPago === 'adelantado' ? 'bg-navy-700 text-white border-navy-700' : ''" @click="nuevoPago.tipoPago = 'adelantado'; calcularAdelanto()">Pago Adelantado</button>
+        </div>
+
+        <div x-show="nuevoPago.tipoPago === 'normal'">
           <label class="text-xs font-medium text-gray-600">Concepto</label>
           <select class="input-modern" x-model="nuevoPago.concepto" @change="autofillMonto()">
-            <option>Colegiatura</option>
-            <option>Inscripción</option>
-            <option>Material didáctico</option>
-            <option>Uniforme</option>
+            <option value="Colegiatura">Colegiatura</option>
+            <option value="Inscripción">Inscripción</option>
+            <option value="Material Didáctico">Material Didáctico</option>
+            <option value="Uniforme">Uniforme</option>
+            <option value="Otro">Otro</option>
+            <option value="Total">Total (Todos los adeudos)</option>
           </select>
+        </div>
+
+        <div x-show="nuevoPago.tipoPago === 'adelantado'">
+          <label class="text-xs font-medium text-gray-600">Meses a adelantar</label>
+          <input type="number" class="input-modern" min="1" max="12" x-model="nuevoPago.mesesAdelantar" @input="calcularAdelanto()">
         </div>
 
         <div>
@@ -1347,6 +1433,30 @@
             <button class="btn-primary" @click="imprimirRecibo()"><i data-lucide="printer" class="w-4 h-4 mr-1"></i> Imprimir Recibo</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL MODIFICAR RECARGO -->
+  <div x-show="recargoEditando" x-cloak class="modal-mask" @click.self="recargoEditando=null" style="z-index: 100;">
+    <div class="modal-container p-6 w-96 relative">
+      <div class="font-bold text-lg text-navy-800">Modificar Recargo</div>
+      <p class="text-xs text-gray-500 mb-4">Modifica el monto o condona el recargo ingresando un valor de $0.</p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-medium text-gray-600">Monto del recargo ($)</label>
+          <input type="number" min="0" class="input-modern" x-model="formRecargo.montoNuevo">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-gray-600">Motivo de la modificación</label>
+          <textarea class="input-modern h-20" placeholder="Ej. Condonación aprobada por dirección..." x-model="formRecargo.motivo"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-5">
+        <button class="btn-outline" @click="recargoEditando=null">Cancelar</button>
+        <button class="btn-primary" @click="guardarRecargo()">Guardar cambios</button>
       </div>
     </div>
   </div>
@@ -1784,6 +1894,7 @@
       // ── Ficha alumno & Directorio ───────────────────────────────────────────
       alumnoSeleccionado: false,
       alumnoActualFicha: null,
+      historialPagosAlumno: [],
       tabAlumno: 'academicos',
       
       filtroEstadoAlumno: '',
@@ -1815,9 +1926,13 @@
         concepto: 'Colegiatura', 
         monto: '', 
         fecha: new Date().toISOString().split('T')[0],
-        becaInfo: null
+        becaInfo: null,
+        tipoPago: 'normal',
+        mesesAdelantar: 1
       },
       pagoAdeudos:    [],
+      recargoEditando: null,
+      formRecargo: { montoNuevo: '', motivo: '' },
       pagoCalculando: false,
       reciboGenerado: null,
       nuevoAlumnoData:{ nombre: '', matricula: '', curp: '', nivel: '', grado: '', grupoId: null, padre: '', telefono: '', tutorId: null },
@@ -2013,7 +2128,7 @@
         if (res.ok) {
           const lista = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
           this.listaAlumnos     = lista.map(window.saeApi.mapAlumno);
-          this.alumnosFiltrados = [...this.listaAlumnos];
+          this.filtrarAlumnos();
           if (res.pagination) {
             this.paginaAlumnos  = res.pagination.page;
             this.totalAlumnos   = res.pagination.total;
@@ -2248,9 +2363,11 @@
         }
       },
       abrirModalPagoDesdeAlumno(al) {
-        // Simulates selecting a student and opening the payment modal
         this.alumnoActualFicha = al;
         this.abrirModalPago();
+        setTimeout(() => {
+          this.seleccionarPagoAlumno(al);
+        }, 50);
       },
       abrirModalVincularTutor() {
         this.busquedaVincularTutor = '';
@@ -2300,6 +2417,48 @@
           window.saeApi.toast('error', 'Error de red');
         }
       },
+      async _cargarTutoresDelAlumno(id) {
+        try {
+          const res = await window.saeApi.alumnos.obtener(id);
+          if (res && res.ok) {
+            this.tutoresAlumnoFicha = res.data.padresOriginal || [];
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      },
+      async _cargarPagosAlumnoFicha() {
+        if (!this.alumnoActualFicha) return;
+        try {
+          const res = await window.saeApi.pagos.listar({ alumnoId: this.alumnoActualFicha.id });
+          if (res && res.ok) {
+            // Check if paginated or flat array
+            this.historialPagosAlumno = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+            // Give lucide icons a moment to render for new elements
+            setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+          }
+        } catch (e) {
+          console.error('Error loading payment history:', e);
+        }
+      },
+      async subirComprobanteHistorial(pagoId, event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        try {
+          const res = await window.saeApi.pagos.subirComprobante(pagoId, file);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Comprobante subido correctamente');
+            this._cargarPagosAlumnoFicha();
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al subir comprobante');
+          }
+        } catch (e) {
+          console.error(e);
+          window.saeApi.toast('error', 'Error de red al subir comprobante');
+        } finally {
+          event.target.value = '';
+        }
+      },
       async guardarCambiosAlumno() {
         // Simplified academic edit
         try {
@@ -2307,7 +2466,7 @@
             nombre: this.alumnoFichaEditable.nombre,
             curp: this.alumnoFichaEditable.curp,
             estado: this.alumnoFichaEditable.estado,
-            observaciones: this.alumnoFichaEditable.autorizados,
+            // observaciones was mistakenly overwritten by autorizados before
             fechaNacimiento: this.alumnoFichaEditable.fechaNacimiento,
             nivel: this.alumnoFichaEditable.nivel,
             grupoId: this.alumnoFichaEditable.grupoId || null
@@ -2323,9 +2482,11 @@
           window.saeApi.toast('error', 'Error de red');
         }
       },
-      async cambiarEstadoAlumno(nuevoEstado) {
+      async cambiarEstadoAlumno(nuevoEstado, motivoExterno) {
         let observacionesExtra = '';
-        if (nuevoEstado === 'Activo' && this.alumnoActualFicha.estado !== 'Activo') {
+        if (motivoExterno) {
+          observacionesExtra = `[${nuevoEstado.toUpperCase()} ${new Date().toLocaleDateString()}]: ${motivoExterno.trim()}`;
+        } else if (nuevoEstado === 'Activo' && this.alumnoActualFicha.estado !== 'Activo') {
           const motivo = prompt('Por favor, ingresa el motivo de la reactivación (ej. acuerdo de pago, convenio institucional):');
           if (motivo === null) return;
           if (motivo.trim() === '') {
@@ -2333,9 +2494,13 @@
             return;
           }
           observacionesExtra = `[REACTIVACIÓN ${new Date().toLocaleDateString()}]: ${motivo.trim()}`;
-        } else if (nuevoEstado !== 'Activo' && this.alumnoActualFicha.estado === 'Activo') {
+        } else if (nuevoEstado !== 'Activo' && nuevoEstado !== this.alumnoActualFicha.estado) {
           const motivo = prompt(`Por favor, ingresa el motivo para cambiar a ${nuevoEstado}:`);
           if (motivo === null) return;
+          if (motivo.trim() === '') {
+            window.saeApi.toast('error', `El motivo para cambiar a ${nuevoEstado} es obligatorio.`);
+            return;
+          }
           observacionesExtra = `[${nuevoEstado.toUpperCase()} ${new Date().toLocaleDateString()}]: ${motivo.trim()}`;
         } else {
           if (!confirm(`¿Estás seguro de cambiar el estado a ${nuevoEstado}?`)) return;
@@ -2360,22 +2525,18 @@
           window.saeApi.toast('error', 'Error de red');
         }
       },
-      async confirmarBajaDefinitiva() {
-        if (!confirm('¿Estás seguro de dar de BAJA DEFINITIVA a este alumno? El expediente quedará cerrado.')) return;
-        try {
-          const res = await window.saeApi.alumnos.eliminar(this.alumnoActualFicha.id);
-          if (res && res.ok) {
-            window.saeApi.toast('exito', 'Alumno dado de baja definitivamente');
-            this.alumnoSeleccionado = false;
-            this.alumnoActualFicha = null;
-            this._cargarAlumnosAPI();
-          } else {
-            window.saeApi.toast('error', res?.message || 'Error al dar de baja');
-          }
-        } catch (e) {
-          window.saeApi.toast('error', 'Error de red');
+      confirmarBajaDefinitiva() {
+        const motivo = prompt('Por favor, ingresa el motivo para la Baja Definitiva:');
+        if (motivo === null) return;
+        if (motivo.trim() === '') {
+          window.saeApi.toast('error', 'El motivo de la Baja Definitiva es obligatorio.');
+          return;
+        }
+        if (confirm('¿Estás seguro de dar BAJA DEFINITiva a este alumno? Esta acción cerrará su expediente y lo ocultará de la vista principal.')) {
+          this.cambiarEstadoAlumno('Baja Definitiva', motivo);
         }
       },
+
       filtrarAlumnosBeca() {
         const q = this.busquedaAlumnoBeca.toLowerCase();
         if (q.trim() === '') {
@@ -2559,6 +2720,8 @@
               grado: res.data.grupo?.grado ? String(res.data.grupo.grado) : '',
               grupoId: res.data.grupoId || ''
             };
+            this.tutoresAlumnoFicha = [];
+            this.historialPagosAlumno = [];
             this.alumnoSeleccionado = true;
             this.tabAlumnoFicha = 'academicos';
             // Asegurarse de tener las becas cargadas
@@ -2931,7 +3094,7 @@
         this.busquedaPagoAlumno  = '';
         this.pagoCoincidencias   = [];
         this.mostrarSugerenciasPago = false;
-        this.nuevoPago           = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10), becaInfo: null };
+        this.nuevoPago           = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0,10), becaInfo: null, tipoPago: 'normal', mesesAdelantar: 1 };
       },
       filtrarPagoAlumnos() {
         const q = this.busquedaPagoAlumno.trim().toLowerCase();
@@ -2951,6 +3114,16 @@
           this.nuevoPago.alumnoId = null;
         }
       },
+      limpiarSeleccionPago() {
+        this.busquedaPagoAlumno = '';
+        this.nuevoPago.alumno = '';
+        this.nuevoPago.alumnoId = null;
+        this.nuevoPago.monto = '';
+        this.nuevoPago.concepto = 'Colegiatura';
+        this.pagoAdeudos = [];
+        this.mostrarSugerenciasPago = false;
+        this.$nextTick(() => { lucide.createIcons(); });
+      },
       async seleccionarPagoAlumno(al) {
         this.nuevoPago.alumno       = al.nombre;
         this.nuevoPago.alumnoId     = al.id;
@@ -2962,22 +3135,26 @@
         // Fetch pending debts (Estado de Cuenta)
         this.pagoCalculando = true;
         try {
+          this.alumnoPagoInfo = null;
+          this.nuevoPago.becaInfo = null;
+          const alRes = await window.saeApi.alumnos.obtener(al.id);
+          if (alRes.ok && alRes.data) {
+             this.alumnoPagoInfo = alRes.data;
+             if (alRes.data.beca) {
+                 this.nuevoPago.becaInfo = { nombre: alRes.data.beca.nombreBeca, porcentaje: Number(alRes.data.beca.porcentaje) };
+             }
+          }
+
           const res = await window.saeApi.pagos.calendario({ alumnoId: al.id, estadoCobro: 'pendiente' });
           if (res.ok && res.data) {
             this.pagoAdeudos = res.data;
-            this.nuevoPago.becaInfo = null;
             // Sum up total debt as suggested amount
             let total = 0;
             res.data.forEach(d => {
               let deuda = Number(d.montoOriginal) + Number(d.montoRecargo) - Number(d.montoPagado);
-              if (d.concepto === 'colegiatura' && d.alumno?.asignacionesBeca?.length > 0) {
-                 const asignacionActiva = d.alumno.asignacionesBeca.find(ab => ab.estado === 'activa');
-                 if (asignacionActiva && asignacionActiva.beca) {
-                    const beca = asignacionActiva.beca;
-                    this.nuevoPago.becaInfo = { nombre: beca.nombreBeca, porcentaje: Number(beca.porcentaje) };
-                    const descuento = (deuda * Number(beca.porcentaje)) / 100;
-                    deuda -= descuento;
-                 }
+              if (d.concepto === 'colegiatura' && this.nuevoPago.becaInfo) {
+                 const descuento = (deuda * this.nuevoPago.becaInfo.porcentaje) / 100;
+                 deuda -= descuento;
               }
               total += Math.max(0, deuda);
             });
@@ -2997,7 +3174,7 @@
         }
       },
       seleccionarAdeudoIndividual(adeudo) {
-        const cMap = { 'COLEGIATURA': 'Colegiatura', 'INSCRIPCION': 'Inscripción', 'MATERIAL_DIDACTICO': 'Material didáctico', 'UNIFORME': 'Uniforme' };
+        const cMap = { 'COLEGIATURA': 'Colegiatura', 'INSCRIPCION': 'Inscripción', 'MATERIAL': 'Material Didáctico', 'UNIFORME': 'Uniforme' };
         this.nuevoPago.concepto = cMap[adeudo.concepto.toUpperCase()] || 'Colegiatura';
         let deuda = Number(adeudo.montoOriginal) + Number(adeudo.montoRecargo) - Number(adeudo.montoPagado);
         if (adeudo.concepto === 'colegiatura' && this.nuevoPago.becaInfo) {
@@ -3006,13 +3183,71 @@
         }
         this.nuevoPago.monto = deuda.toFixed(2);
       },
+      calcularAdelanto() {
+        if (!this.nuevoPago.alumnoId) return;
+        const numMeses = parseInt(this.nuevoPago.mesesAdelantar) || 1;
+        
+        let montoMensual = 0;
+        if (this.alumnoPagoInfo?.planPago?.montoMensual) {
+           montoMensual = Number(this.alumnoPagoInfo.planPago.montoMensual);
+        }
+        
+        const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
+        const aAdelantar = colegiaturas.slice(0, numMeses);
+        let total = 0;
+        
+        for (const deud of aAdelantar) {
+          let cobro = Number(deud.montoOriginal);
+          const recargo = Number(deud.montoRecargo) || 0;
+          const pagado = Number(deud.montoPagado) || 0;
+          let deuda = Math.max(0, (cobro + recargo) - pagado);
+          if (this.nuevoPago.becaInfo) {
+             const descuento = (deuda * this.nuevoPago.becaInfo.porcentaje) / 100;
+             deuda -= descuento;
+          }
+          total += deuda;
+        }
+        
+        const faltantes = numMeses - aAdelantar.length;
+        if (faltantes > 0 && montoMensual > 0) {
+           let cuotaFaltante = montoMensual;
+           if (this.nuevoPago.becaInfo) {
+              const descuento = (cuotaFaltante * this.nuevoPago.becaInfo.porcentaje) / 100;
+              cuotaFaltante -= descuento;
+           }
+           total += (faltantes * cuotaFaltante);
+        }
+        
+        this.nuevoPago.monto = total.toFixed(2);
+      },
       autofillMonto() {
         if (!this.pagoAdeudos || this.pagoAdeudos.length === 0) return;
-        const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(' ', '_');
-        const targetMap = { 'COLEGIATURA': 'COLEGIATURA', 'INSCRIPCION': 'INSCRIPCION', 'MATERIAL_DIDACTICO': 'MATERIAL_DIDACTICO', 'UNIFORME': 'UNIFORME' };
-        let targetCode = targetMap[normalize(this.nuevoPago.concepto)] || 'OTRO';
         
-        const adeudosDelConcepto = this.pagoAdeudos.filter(a => a.concepto.toUpperCase() === targetCode || a.concepto.toUpperCase() === normalize(this.nuevoPago.concepto));
+        if (this.nuevoPago.concepto === 'Total') {
+          let total = 0;
+          this.pagoAdeudos.forEach(d => {
+             let deuda = Number(d.montoOriginal) + Number(d.montoRecargo) - Number(d.montoPagado);
+             if (d.concepto === 'colegiatura' && this.nuevoPago.becaInfo) {
+                 const descuento = (deuda * this.nuevoPago.becaInfo.porcentaje) / 100;
+                 deuda -= descuento;
+             }
+             total += Math.max(0, deuda);
+          });
+          this.nuevoPago.monto = total.toFixed(2);
+          return;
+        }
+
+        const normalize = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        const selConcepto = normalize(this.nuevoPago.concepto);
+        
+        const adeudosDelConcepto = this.pagoAdeudos.filter(a => {
+           const dbConcepto = normalize(a.concepto);
+           if (selConcepto.includes('MATERIAL') && dbConcepto.includes('MATERIAL')) return true;
+           if (selConcepto.includes('INSCRIPCION') && dbConcepto.includes('INSCRIPCION')) return true;
+           if (selConcepto.includes('UNIFORME') && dbConcepto.includes('UNIFORME')) return true;
+           if (selConcepto.includes('COLEGIATURA') && dbConcepto.includes('COLEGIATURA')) return true;
+           return dbConcepto === selConcepto;
+        });
         
         if (adeudosDelConcepto.length > 0) {
           let total = 0;
@@ -3029,6 +3264,43 @@
           this.nuevoPago.monto = '';
         }
       },
+      iniciarEdicionRecargo(recargo) {
+        this.recargoEditando = recargo;
+        this.formRecargo.montoNuevo = recargo.montoActual;
+        this.formRecargo.motivo = recargo.motivoModificacion || '';
+      },
+      async guardarRecargo() {
+        if (!this.formRecargo.motivo || this.formRecargo.motivo.trim().length < 3) {
+          window.saeApi.toast('advertencia', 'El motivo de la modificación es obligatorio.');
+          return;
+        }
+        if (this.formRecargo.montoNuevo === '' || Number(this.formRecargo.montoNuevo) < 0) {
+          window.saeApi.toast('advertencia', 'Ingresa un monto válido.');
+          return;
+        }
+        const esCero = Number(this.formRecargo.montoNuevo) === 0;
+        if (esCero && !confirm('¿Estás seguro de condonar totalmente este recargo?')) {
+          return;
+        }
+
+        const res = await window.saeApi.pagos.modificarRecargo(this.recargoEditando.recargoId, {
+          montoNuevo: Number(this.formRecargo.montoNuevo),
+          motivo: this.formRecargo.motivo
+        });
+
+        if (res.ok) {
+          window.saeApi.toast('exito', res.message);
+          this.recargoEditando = null;
+          // Refrescar adeudos del alumno actual
+          if (this.nuevoPago.alumnoId) {
+             const al = this.pagoCoincidencias.find(x => x.id === this.nuevoPago.alumnoId) || this.listaAlumnos.find(x => x.id === this.nuevoPago.alumnoId) || { id: this.nuevoPago.alumnoId, nombre: this.nuevoPago.alumno };
+             this.seleccionarPagoAlumno(al);
+          }
+          lucide.createIcons();
+        } else {
+          window.saeApi.toast('error', res.message || 'Error al modificar el recargo.');
+        }
+      },
       async agregarPago() {
         if (!this.nuevoPago.alumnoId) {
           window.saeApi.toast('advertencia', 'Selecciona un alumno de la lista de sugerencias.');
@@ -3039,12 +3311,25 @@
           return;
         }
         const concepto = window.saeApi.CONCEPTO_MAP[this.nuevoPago.concepto] || 'OTRO';
-        const res      = await window.saeApi.pagos.registrar({
-          alumnoId:  this.nuevoPago.alumnoId,
-          concepto,
-          monto:     parseFloat(this.nuevoPago.monto),
-          fecha:     this.nuevoPago.fecha,
-        });
+        let res;
+        
+        if (this.nuevoPago.tipoPago === 'adelantado') {
+          res = await window.saeApi.pagos.adelantado({
+            alumnoId:  this.nuevoPago.alumnoId,
+            meses:     parseInt(this.nuevoPago.mesesAdelantar),
+            metodoPago: 'efectivo',
+            fecha:     this.nuevoPago.fecha,
+            monto:     parseFloat(this.nuevoPago.monto)
+          });
+          this.nuevoPago.concepto = `Adelanto de ${this.nuevoPago.mesesAdelantar} meses`;
+        } else {
+          res = await window.saeApi.pagos.registrar({
+            alumnoId:  this.nuevoPago.alumnoId,
+            concepto,
+            monto:     parseFloat(this.nuevoPago.monto),
+            fecha:     this.nuevoPago.fecha,
+          });
+        }
         if (res.ok) {
           const pagoId = res.data.pagoId || res.data.id;
           const fileInput = document.getElementById('comprobanteInputPago');
@@ -3080,6 +3365,8 @@
           this.nuevoPago.alumno = '';
           this.nuevoPago.alumnoId = null;
           this.nuevoPago.monto = '';
+          this.nuevoPago.tipoPago = 'normal';
+          this.nuevoPago.mesesAdelantar = 1;
           this.busquedaPagoAlumno = '';
           this.pagoAdeudos = [];
           if (fileInput) fileInput.value = '';

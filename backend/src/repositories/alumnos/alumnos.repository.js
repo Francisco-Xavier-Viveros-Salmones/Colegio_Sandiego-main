@@ -37,9 +37,13 @@ const INCLUDE_COMPLETO = {
     include: {
       grupo: { select: { grupoId: true, nombre: true, grado: true, seccion: true, nivel: { select: { codigo: true } } } },
       ciclo: { select: { cicloId: true, nombre: true, activo: true } },
-      planDepago: { select: { planPagoId: true, nombre: true, meses: true } },
+      planDepago: { select: { planPagoId: true, nombre: true, meses: true, montoMensual: true } },
     },
   },
+  asignacionesBeca: {
+    where: { estado: 'activa' },
+    include: { beca: true }
+  }
 };
 
 /**
@@ -89,6 +93,7 @@ function mapAlumno(a) {
     estadoPago:  inscripcionActual?.estadoFinanciero ?? null,
     mesesAdeudo: inscripcionActual?.mesesAdeudo ?? 0,
     planPago:    inscripcionActual?.planDepago ?? null,
+    beca:        a.asignacionesBeca?.length > 0 ? a.asignacionesBeca[0].beca : null,
     createdAt:   a.creadoEn,
     updatedAt:   a.actualizadoEn,
   };
@@ -342,7 +347,10 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
       ...(nombre ? { nombreCompleto: nombre } : {}),
       ...(nivelId ? { nivelId } : {}),
       ...(rest.curp !== undefined ? { curp: rest.curp } : {}),
-      ...(rest.estado ? { estado: rest.estado } : {}),
+      ...(rest.estado ? { 
+        estado: rest.estado,
+        ...(rest.estado === 'Baja Definitiva' ? { eliminadoEn: new Date() } : (rest.estado === 'Activo' ? { eliminadoEn: null } : {}))
+      } : {}),
       ...(rest.fechaNacimiento !== undefined ? { fechaNacimiento: rest.fechaNacimiento ? new Date(rest.fechaNacimiento) : null } : {}),
       ...(rest.diaLimitePago !== undefined ? { diaLimitePago: rest.diaLimitePago } : {}),
       ...(rest.observaciones !== undefined ? { observaciones: rest.observaciones } : {}),
