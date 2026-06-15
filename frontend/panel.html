@@ -362,6 +362,7 @@
                   <button class="px-4 py-3 text-sm font-medium" :class="tabAlumnoFicha==='academicos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='academicos'">Expediente Escolar</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='tutores'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='tutores'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia / Tutores</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='planes_pago'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='planes_pago'"><i data-lucide="calendar" class="w-4 h-4 mr-2"></i> Plan de Pago</button>
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='estado_cuenta'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='estado_cuenta'; _cargarEstadoCuentaAlumnoFicha()"><i data-lucide="file-clock" class="w-4 h-4 mr-2"></i> Estado de Cuenta</button>
                   <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabAlumnoFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabAlumnoFicha='historial_pagos'; _cargarPagosAlumnoFicha()"><i data-lucide="receipt" class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
                 </div>
                 <!-- Pestaña: Expediente Escolar -->
@@ -524,6 +525,56 @@
                   </div>
                 </div>
 
+                <!-- Pestaña: Estado de Cuenta (Línea del tiempo) -->
+                <div class="p-5" x-show="tabAlumnoFicha==='estado_cuenta'" x-cloak>
+                  <div class="flex justify-between items-center mb-6 border-b pb-4">
+                    <h3 class="font-bold text-navy-800">Estado de Cuenta</h3>
+                    <button class="btn-outline text-xs" @click="_cargarEstadoCuentaAlumnoFicha()"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
+                  </div>
+                  
+                  <div class="relative border-l-2 border-gray-200 ml-4 space-y-8 pl-6">
+                    <template x-for="item in estadoCuentaAlumno" :key="item.timelineId">
+                      <div class="relative">
+                        <!-- Icono / Badge -->
+                        <div class="absolute -left-[35px] mt-1 w-6 h-6 rounded-full border-2 bg-white flex items-center justify-center"
+                             :class="item.estadoCalc === 'PAGADO' ? 'border-emerald-500 text-emerald-500' : (item.estadoCalc === 'VENCIDO' ? 'border-crimson-500 text-crimson-500' : 'border-amber-500 text-amber-500')">
+                          <i :data-lucide="item.estadoCalc === 'PAGADO' ? 'check-circle' : 'clock'" class="w-4 h-4"></i>
+                        </div>
+                        
+                        <!-- Contenido -->
+                        <div class="card-clean p-4">
+                          <div class="flex justify-between items-start mb-2">
+                            <div>
+                              <div class="font-bold text-navy-800 uppercase" x-text="item.concepto + (item.mes ? ' ' + item.mes : '')"></div>
+                              <div class="text-xs text-gray-500" x-text="'Vencimiento: ' + item.fechaVencimiento"></div>
+                            </div>
+                            <span class="px-2 py-1 rounded text-[10px] font-bold"
+                                  :class="item.estadoCalc === 'PAGADO' ? 'bg-emerald-100 text-emerald-700' : (item.estadoCalc === 'VENCIDO' ? 'bg-crimson-100 text-crimson-700' : 'bg-amber-100 text-amber-700')"
+                                  x-text="item.estadoCalc"></span>
+                          </div>
+                          <div class="grid grid-cols-3 gap-4 mt-3 pt-3 border-t">
+                            <div>
+                              <div class="text-[10px] text-gray-500">Monto Original</div>
+                              <div class="font-bold text-sm text-navy-700" x-text="'$' + Number(item.montoOriginal).toFixed(2)"></div>
+                            </div>
+                            <div>
+                              <div class="text-[10px] text-gray-500">Monto Pagado</div>
+                              <div class="font-bold text-sm text-emerald-600" x-text="'$' + Number(item.montoPagado).toFixed(2)"></div>
+                            </div>
+                            <div>
+                              <div class="text-[10px] text-gray-500">Saldo Pendiente</div>
+                              <div class="font-bold text-sm" :class="Number(item.saldoPendiente) > 0 ? 'text-crimson-600' : 'text-gray-700'" x-text="'$' + Number(item.saldoPendiente).toFixed(2)"></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                    <div x-show="estadoCuentaAlumno.length === 0" class="text-gray-400 text-sm italic">
+                      No hay registros en el calendario de pagos.
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Pestaña: Historial de Pagos -->
                 <div class="p-5 space-y-4" x-show="tabAlumnoFicha==='historial_pagos'">
                   <div class="flex justify-between items-center mb-4">
@@ -621,103 +672,28 @@
             </div>
 
             <!-- Ficha del Tutor -->
-            <div x-show="tutorSeleccionado" class="card-clean p-6">
-              <div class="flex justify-between items-start mb-6 border-b pb-4">
-                <div class="flex gap-4 items-center">
-                  <div class="w-16 h-16 bg-navy-100 rounded-full flex justify-center items-center text-navy-800 text-xl font-bold" x-text="(tutorActualFicha?.nombreCompleto||'').charAt(0)"></div>
-                  <div>
-                    <h2 class="text-xl font-bold text-navy-800" x-text="tutorActualFicha?.nombreCompleto"></h2>
-                    <p class="text-sm text-gray-500" x-text="tutorActualFicha?.correoElectronico || 'Sin correo'"></p>
+            <div x-show="tutorSeleccionado" class="grid grid-cols-3 gap-5" x-data="{ tabTutorFicha: 'alumnos' }">
+              <div class="card-clean col-span-1">
+                <div class="p-5 text-center">
+                  <div class="w-20 h-20 mx-auto bg-navy-100 rounded-full flex justify-center items-center text-navy-800 text-2xl font-bold" x-text="(tutorActualFicha?.nombreCompleto||'').charAt(0)"></div>
+                  <h2 class="font-bold mt-3 text-navy-800" x-text="tutorActualFicha?.nombreCompleto"></h2>
+                  <p class="text-xs text-gray-500" x-text="tutorActualFicha?.correoElectronico || 'Sin correo'"></p>
+                  <div class="mt-4 space-y-2">
+                    
+                    <button class="btn-outline w-full" @click="tutorSeleccionado=false">← Regresar a Directorio</button>
                   </div>
-                </div>
-                <div class="flex gap-2">
-                  <button class="btn-outline" @click="tutorSeleccionado=false">Volver al listado</button>
-                  <button class="btn-primary" @click="guardarCambiosTutor()">Guardar Perfil</button>
                 </div>
               </div>
 
-              <div class="grid grid-cols-2 gap-8">
-                <!-- Columna Izquierda: Datos del Tutor -->
-                <div class="space-y-4">
-                  <h3 class="font-bold text-navy-800 border-b pb-2">Información y Contacto</h3>
-                  <div class="grid grid-cols-2 gap-4">
-                    <div class="col-span-2">
-                      <label class="text-xs font-medium text-gray-600">Nombre Completo</label>
-                      <input type="text" class="input-modern" x-model="tutorFichaEditable.nombreCompleto">
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">Teléfono Móvil / Fijo</label>
-                      <input type="text" class="input-modern" x-model="tutorFichaEditable.telefono">
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
-                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoElectronico">
-                    </div>
-                    <div class="col-span-2">
-                      <label class="text-xs font-medium text-gray-600">Dirección Domicilio</label>
-                      <textarea class="input-modern" rows="2" x-model="tutorFichaEditable.direccion"></textarea>
-                    </div>
-                  </div>
-
-                  <h3 class="font-bold text-navy-800 border-b pb-2 mt-6">Datos de Facturación (Opcional)</h3>
-                  <div class="grid grid-cols-2 gap-4">
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">RFC</label>
-                      <input type="text" class="input-modern uppercase" maxlength="13" x-model="tutorFichaEditable.rfc">
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
-                      <select class="input-modern" x-model="tutorFichaEditable.regimenFiscal">
-                        <option value="">Seleccionar...</option>
-                        <option value="601">601 - General de Ley PM</option>
-                        <option value="603">603 - Personas Morales Fines No Lucrativos</option>
-                        <option value="605">605 - Sueldos y Salarios</option>
-                        <option value="606">606 - Arrendamiento</option>
-                        <option value="608">608 - Demás ingresos</option>
-                        <option value="610">610 - Residentes en el Extranjero</option>
-                        <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
-                        <option value="616">616 - Sin obligaciones fiscales</option>
-                        <option value="621">621 - Incorporación Fiscal</option>
-                        <option value="625">625 - Régimen Simplificado de Confianza (RESICO)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">Uso de CFDI</label>
-                      <select class="input-modern" x-model="tutorFichaEditable.usoCfdi">
-                        <option value="">Seleccionar...</option>
-                        <option value="G01">G01 - Adquisición de mercancías</option>
-                        <option value="G03">G03 - Gastos en general</option>
-                        <option value="D01">D01 - Honorarios médicos</option>
-                        <option value="D02">D02 - Gastos médicos por incapacidad</option>
-                        <option value="D05">D05 - Seguros de Gastos Médicos</option>
-                        <option value="D10">D10 - Pagos por servicios educativos (colegiaturas)</option>
-                        <option value="S01">S01 - Sin efectos fiscales</option>
-                        <option value="CP01">CP01 - Pagos</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-gray-600">Código Postal Fiscal</label>
-                      <input type="text" class="input-modern" maxlength="5" placeholder="Ej: 37000" x-model="tutorFichaEditable.codigoPostal">
-                    </div>
-                    <div class="col-span-2">
-                      <label class="text-xs font-medium text-gray-600">Dirección Fiscal</label>
-                      <textarea class="input-modern" rows="2" placeholder="Calle, número, colonia, ciudad, estado" x-model="tutorFichaEditable.direccionFiscal"></textarea>
-                    </div>
-                    <div class="col-span-2">
-                      <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
-                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion">
-                    </div>
-                    <div class="col-span-2 mt-2">
-                      <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
-                        <input type="checkbox" class="rounded border-gray-300 text-navy-600" x-model="tutorFichaEditable.requiereFactura">
-                        Requiere facturación
-                      </label>
-                    </div>
-                  </div>
+              <div class="card-clean col-span-2">
+                <div class="flex border-b overflow-x-auto whitespace-nowrap">
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabTutorFicha==='alumnos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='alumnos'"><i data-lucide="users" class="w-4 h-4 mr-2"></i> Familia / Alumnos</button>
+                  <button class="px-4 py-3 text-sm font-medium flex items-center" :class="tabTutorFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='historial_pagos'; _cargarPagosTutorFicha()"><i data-lucide="receipt" class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
+                  <button class="px-4 py-3 text-sm font-medium" :class="tabTutorFicha==='informacion'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'" @click="tabTutorFicha='informacion'">Información del Tutor</button>
                 </div>
 
-                <!-- Columna Derecha: Alumnos (Hijos) -->
-                <div>
+                <!-- Pestaña: Alumnos -->
+                <div class="p-5 space-y-4" x-show="tabTutorFicha==='alumnos'">
                   <div class="flex justify-between items-center border-b pb-2 mb-4">
                     <h3 class="font-bold text-navy-800">Alumnos / Hijos Vinculados</h3>
                   </div>
@@ -736,9 +712,130 @@
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
+
+                <!-- Pestaña: Historial de Pagos -->
+                <div class="p-5 space-y-4" x-show="tabTutorFicha==='historial_pagos'">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-semibold text-gray-700">Historial de Pagos de sus Alumnos Vinculados</h3>
+                    <button class="btn-outline text-xs" @click="_cargarPagosTutorFicha()"><i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Actualizar</button>
+                  </div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm text-gray-600">
+                      <thead class="bg-gray-50 text-gray-700 uppercase text-xs">
+                        <tr>
+                          <th class="px-4 py-3 rounded-tl-lg">Alumno</th>
+                          <th class="px-4 py-3">Fecha</th>
+                          <th class="px-4 py-3">Concepto</th>
+                          <th class="px-4 py-3">Método</th>
+                          <th class="px-4 py-3 text-right rounded-tr-lg">Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-gray-100">
+                        <template x-for="pago in historialPagosTutor" :key="pago.id">
+                          <tr class="hover:bg-gray-50/50 transition-colors">
+                            <td class="px-4 py-3 font-medium text-navy-800" x-text="pago.alumnoNombre"></td>
+                            <td class="px-4 py-3" x-text="pago.fecha.split('T')[0]"></td>
+                            <td class="px-4 py-3" x-text="pago.concepto + (pago.recargo ? ' (con recargo)' : '')"></td>
+                            <td class="px-4 py-3" x-text="pago.metodoPago"></td>
+                            <td class="px-4 py-3 text-right text-emerald-600 font-semibold" x-text="'$' + pago.monto"></td>
+                          </tr>
+                        </template>
+                        <tr x-show="!historialPagosTutor || historialPagosTutor.length === 0">
+                          <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            No hay pagos registrados para los alumnos de este tutor.
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Pestaña: Información -->
+                <div class="p-5 space-y-4" x-show="tabTutorFicha==='informacion'">
+                  <div class="grid grid-cols-2 gap-4">
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Nombre Completo</label>
+                      <input type="text" class="input-modern" x-model="tutorFichaEditable.nombreCompleto" :readonly="!editandoInfoTutor">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Teléfono Móvil / Fijo</label>
+                      <input type="text" class="input-modern" x-model="tutorFichaEditable.telefono" :readonly="!editandoInfoTutor">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Correo Electrónico</label>
+                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoElectronico" :readonly="!editandoInfoTutor">
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Dirección Domicilio</label>
+                      <textarea class="input-modern" rows="2" x-model="tutorFichaEditable.direccion" :readonly="!editandoInfoTutor"></textarea>
+                    </div>
+                  </div>
+
+                  <div class="flex justify-end mt-4 border-b pb-6">
+                    <button class="btn-outline flex items-center mr-2" x-show="!editandoInfoTutor" @click="editandoInfoTutor = true"><i data-lucide="edit" class="w-4 h-4 mr-2"></i> Modificar Información</button>
+                    <button class="btn-primary flex items-center" x-show="editandoInfoTutor" @click="guardarCambiosTutor()"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Guardar Perfil</button>
+                  </div>
+
+                  <div class="mt-6 flex items-center justify-between border-b pb-2">
+                    <h3 class="font-bold text-navy-800">Datos de Facturación (Opcional)</h3>
+                    <label class="flex items-center gap-2 cursor-pointer text-sm text-gray-700 font-medium">
+                      <input type="checkbox" class="rounded border-gray-300 text-navy-600 focus:ring-navy-600" x-model="tutorFichaEditable.requiereFactura" :disabled="!editandoFacturacionTutor">
+                      Requiere facturación
+                    </label>
+                  </div>
+                  
+                  <div class="grid grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">RFC</label>
+                      <input type="text" class="input-modern uppercase" maxlength="13" x-model="tutorFichaEditable.rfc" :readonly="!editandoFacturacionTutor" :class="errorFacturacion && (!tutorFichaEditable.rfc || tutorFichaEditable.rfc.length < 12) ? 'border-crimson-500 ring-crimson-500' : ''">
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Régimen Fiscal (Código)</label>
+                      <select class="input-modern" x-model="tutorFichaEditable.regimenFiscal" :disabled="!editandoFacturacionTutor" :class="errorFacturacion && !tutorFichaEditable.regimenFiscal ? 'border-crimson-500 ring-crimson-500' : ''">
+                        <option value="">Seleccionar...</option>
+                        <option value="601">601 - General de Ley PM</option>
+                        <option value="603">603 - Personas Morales Fines No Lucrativos</option>
+                        <option value="605">605 - Sueldos y Salarios</option>
+                        <option value="606">606 - Arrendamiento</option>
+                        <option value="608">608 - Demás ingresos</option>
+                        <option value="610">610 - Residentes en el Extranjero</option>
+                        <option value="612">612 - Personas Físicas con Actividades Empresariales</option>
+                        <option value="616">616 - Sin obligaciones fiscales</option>
+                        <option value="621">621 - Incorporación Fiscal</option>
+                        <option value="625">625 - Régimen Simplificado de Confianza (RESICO)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Uso de CFDI</label>
+                      <select class="input-modern" x-model="tutorFichaEditable.usoCfdi" :disabled="!editandoFacturacionTutor" :class="errorFacturacion && !tutorFichaEditable.usoCfdi ? 'border-crimson-500 ring-crimson-500' : ''">
+                        <option value="">Seleccionar...</option>
+                        <option value="G01">G01 - Adquisición de mercancías</option>
+                        <option value="G03">G03 - Gastos en general</option>
+                        <option value="D01">D01 - Honorarios médicos</option>
+                        <option value="D02">D02 - Gastos médicos por incapacidad</option>
+                        <option value="D05">D05 - Seguros de Gastos Médicos</option>
+                        <option value="D10">D10 - Pagos por servicios educativos (colegiaturas)</option>
+                        <option value="S01">S01 - Sin efectos fiscales</option>
+                        <option value="CP01">CP01 - Pagos</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-xs font-medium text-gray-600">Código Postal Fiscal</label>
+                      <input type="text" class="input-modern" maxlength="5" placeholder="Ej: 37000" x-model="tutorFichaEditable.codigoPostal" :readonly="!editandoFacturacionTutor" :class="errorFacturacion && (!tutorFichaEditable.codigoPostal || tutorFichaEditable.codigoPostal.length !== 5) ? 'border-crimson-500 ring-crimson-500' : ''">
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Dirección Fiscal</label>
+                      <textarea class="input-modern" rows="2" placeholder="Calle, número, colonia, ciudad, estado" x-model="tutorFichaEditable.direccionFiscal" :readonly="!editandoFacturacionTutor" :class="errorFacturacion && (!tutorFichaEditable.direccionFiscal || tutorFichaEditable.direccionFiscal.trim() === '') ? 'border-crimson-500 ring-crimson-500' : ''"></textarea>
+                    </div>
+                    <div class="col-span-2">
+                      <label class="text-xs font-medium text-gray-600">Correo para envío de CFDI</label>
+                      <input type="email" class="input-modern" x-model="tutorFichaEditable.correoFacturacion" :readonly="!editandoFacturacionTutor" :class="errorFacturacion && (!tutorFichaEditable.correoFacturacion || !tutorFichaEditable.correoFacturacion.includes('@')) ? 'border-crimson-500 ring-crimson-500' : ''">
+                    </div>
+                  </div>
+                  <div class="flex justify-end mt-4 pt-4 border-t border-gray-200">
+                    <button class="btn-outline flex items-center mr-2" x-show="!editandoFacturacionTutor" @click="editandoFacturacionTutor = true"><i data-lucide="edit" class="w-4 h-4 mr-2"></i> Modificar Datos Fiscales</button>
+                    <button class="btn-primary flex items-center" x-show="editandoFacturacionTutor" @click="guardarFacturacionTutor()"><i data-lucide="save" class="w-4 h-4 mr-2"></i> Guardar Datos Fiscales</button>
+                  </div>
         </div>
       </template>
 
@@ -1868,7 +1965,7 @@
 
       // ── Reportes ──────────────────────────────────────────────────────────────
       reporteActivo: 'corte',
-      reporteCorte: null,
+reporteCorte: null,
       reporteIngresos: null,
       reporteDeudores: null,
       reporteFacturables: null,
@@ -1895,6 +1992,8 @@
       alumnoSeleccionado: false,
       alumnoActualFicha: null,
       historialPagosAlumno: [],
+      historialPagosTutor: [],
+      estadoCuentaAlumno: [],
       tabAlumno: 'academicos',
       
       filtroEstadoAlumno: '',
@@ -1908,6 +2007,9 @@
       tutorSeleccionado: false,
       tutorActualFicha: null,
       tutorFichaEditable: {},
+      errorFacturacion: false,
+      editandoInfoTutor: false,
+      editandoFacturacionTutor: false,
       alumnoFichaEditable: {},
       
       modalNuevoTutor: false,
@@ -2337,6 +2439,27 @@
         } catch(e) { window.saeApi.toast('error', 'Error de red'); }
       },
       async guardarCambiosTutor() {
+        // También validar aquí por si guardan desde el botón principal
+        if (this.tutorFichaEditable.requiereFactura) {
+          let errores = [];
+          const rfc = this.tutorFichaEditable.rfc || '';
+          if (rfc.length < 12 || rfc.length > 13) errores.push('El RFC debe tener 12 o 13 caracteres');
+          if (!this.tutorFichaEditable.regimenFiscal) errores.push('Falta seleccionar el Régimen Fiscal');
+          if (!this.tutorFichaEditable.usoCfdi) errores.push('Falta seleccionar el Uso de CFDI');
+          const cp = this.tutorFichaEditable.codigoPostal || '';
+          if (cp.length !== 5) errores.push('El Código Postal debe tener 5 dígitos');
+          const dir = this.tutorFichaEditable.direccionFiscal || '';
+          if (dir.trim() === '') errores.push('Falta la Dirección Fiscal');
+          const email = this.tutorFichaEditable.correoFacturacion || '';
+          if (!email.includes('@')) errores.push('El correo de facturación es inválido');
+
+          if (errores.length > 0) {
+            this.errorFacturacion = true;
+            window.saeApi.toast('error', errores[0]);
+            return;
+          }
+        }
+        this.errorFacturacion = false;
         try {
           const payload = {
             nombreCompleto: this.tutorFichaEditable.nombreCompleto,
@@ -2353,13 +2476,62 @@
           };
           const res = await window.saeApi.tutores.actualizar(this.tutorActualFicha.tutorId, payload);
           if (res && res.ok) {
-            window.saeApi.toast('exito', 'Perfil del tutor actualizado');
+            window.saeApi.toast('exito', 'Informacion modificada correctamente');
+            this.editandoInfoTutor = false;
             this._cargarTutoresAPI();
           } else {
             window.saeApi.toast('error', res?.message || 'Error al guardar');
           }
         } catch (e) {
           window.saeApi.toast('error', 'Error de red al actualizar tutor');
+        }
+      },
+      async guardarFacturacionTutor() {
+        if (this.tutorFichaEditable.requiereFactura) {
+          let errores = [];
+          const rfc = this.tutorFichaEditable.rfc || '';
+          if (rfc.length < 12 || rfc.length > 13) errores.push('El RFC debe tener 12 o 13 caracteres');
+          if (!this.tutorFichaEditable.regimenFiscal) errores.push('Falta seleccionar el Régimen Fiscal');
+          if (!this.tutorFichaEditable.usoCfdi) errores.push('Falta seleccionar el Uso de CFDI');
+          const cp = this.tutorFichaEditable.codigoPostal || '';
+          if (cp.length !== 5) errores.push('El Código Postal debe tener 5 dígitos');
+          const dir = this.tutorFichaEditable.direccionFiscal || '';
+          if (dir.trim() === '') errores.push('Falta la Dirección Fiscal');
+          const email = this.tutorFichaEditable.correoFacturacion || '';
+          if (!email.includes('@')) errores.push('El correo de facturación es inválido');
+
+          if (errores.length > 0) {
+            this.errorFacturacion = true;
+            window.saeApi.toast('error', errores[0]);
+            return;
+          }
+        }
+        this.errorFacturacion = false;
+        try {
+          const payload = {
+            nombreCompleto: this.tutorFichaEditable.nombreCompleto,
+            telefono: this.tutorFichaEditable.telefono,
+            correoElectronico: this.tutorFichaEditable.correoElectronico,
+            direccion: this.tutorFichaEditable.direccion,
+            rfc: this.tutorFichaEditable.rfc,
+            regimenFiscal: this.tutorFichaEditable.regimenFiscal,
+            usoCfdi: this.tutorFichaEditable.usoCfdi,
+            direccionFiscal: this.tutorFichaEditable.direccionFiscal,
+            codigoPostal: this.tutorFichaEditable.codigoPostal,
+            correoFacturacion: this.tutorFichaEditable.correoFacturacion,
+            requiereFactura: this.tutorFichaEditable.requiereFactura,
+          };
+          const res = await window.saeApi.tutores.actualizar(this.tutorActualFicha.tutorId, payload);
+          if (res && res.ok) {
+            window.saeApi.toast('exito', 'Datos fiscales modificado correctamente');
+            this.editandoFacturacionTutor = false;
+            this._cargarTutoresAPI();
+            setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+          } else {
+            window.saeApi.toast('error', res?.message || 'Error al guardar facturación');
+          }
+        } catch (e) {
+          window.saeApi.toast('error', 'Error de red al actualizar facturación');
         }
       },
       abrirModalPagoDesdeAlumno(al) {
@@ -2439,6 +2611,82 @@
           }
         } catch (e) {
           console.error('Error loading payment history:', e);
+        }
+      },
+      async _cargarEstadoCuentaAlumnoFicha() {
+        if (!this.alumnoActualFicha) return;
+        try {
+          const [resCal, resPagos] = await Promise.all([
+            window.saeApi.pagos.calendario({ alumnoId: this.alumnoActualFicha.id }),
+            window.saeApi.pagos.listar({ alumnoId: this.alumnoActualFicha.id })
+          ]);
+          
+          let datos = [];
+          if (resCal && resCal.ok) {
+            let calData = Array.isArray(resCal.data) ? resCal.data : [];
+            const hoy = new Date().toISOString().split('T')[0];
+            calData = calData.map(d => {
+              if (d.estadoCobro === 'pagado' || Number(d.saldoPendiente) === 0) {
+                d.estadoCalc = 'PAGADO';
+              } else if (d.fechaVencimiento < hoy) {
+                d.estadoCalc = 'VENCIDO';
+              } else {
+                d.estadoCalc = 'PENDIENTE';
+              }
+              d.timelineId = 'cal_' + d.calendarioPagoId;
+              return d;
+            });
+            datos = datos.concat(calData);
+          }
+          
+          if (resPagos && resPagos.ok) {
+            let pagosData = resPagos.pagination ? resPagos.data : (Array.isArray(resPagos.data) ? resPagos.data : []);
+            let pagosSinCalendario = pagosData.filter(p => !p.aplicaciones || p.aplicaciones.length === 0);
+            pagosSinCalendario = pagosSinCalendario.map(p => {
+              return {
+                timelineId: 'pago_' + p.id,
+                concepto: p.concepto || 'Pago',
+                mes: '',
+                fechaVencimiento: p.fecha.split('T')[0],
+                montoOriginal: p.monto,
+                montoPagado: p.monto,
+                saldoPendiente: 0,
+                estadoCalc: 'PAGADO',
+                estadoCobro: 'pagado'
+              };
+            });
+            datos = datos.concat(pagosSinCalendario);
+          }
+          
+          datos.sort((a,b) => new Date(a.fechaVencimiento) - new Date(b.fechaVencimiento));
+          this.estadoCuentaAlumno = datos;
+          setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+        } catch (e) {
+          console.error('Error loading estado de cuenta:', e);
+        }
+      },
+      async _cargarPagosTutorFicha() {
+        if (!this.tutorActualFicha?.alumnos || this.tutorActualFicha.alumnos.length === 0) {
+          this.historialPagosTutor = [];
+          return;
+        }
+        try {
+          let todosLosPagos = [];
+          for (let al of this.tutorActualFicha.alumnos) {
+            const res = await window.saeApi.pagos.listar({ alumnoId: al.alumnoId });
+            if (res && res.ok) {
+              const pagosAlumno = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+              pagosAlumno.forEach(p => { p.alumnoNombre = al.alumno?.nombreCompleto || 'Alumno' });
+              todosLosPagos = todosLosPagos.concat(pagosAlumno);
+            }
+          }
+          // Sort by date descending
+          todosLosPagos.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+          this.historialPagosTutor = todosLosPagos;
+          
+          setTimeout(() => { if(window.lucide) window.lucide.createIcons(); }, 150);
+        } catch (e) {
+          console.error('Error loading tutor payment history:', e);
         }
       },
       async subirComprobanteHistorial(pagoId, event) {
@@ -3529,6 +3777,13 @@
         const res = await window.saeApi.usuarios.resetPassword(this._resetTarget.id, this._resetNuevaPassword);
         this.modalResetPassword = false;
         if (res.ok) {
+          // Cargar datos del dashboard si tiene algún permiso financiero/admin
+          if (this.tienePermiso('pagos', 'lectura') || this.esGestor()) {
+            this._cargarDashboard();
+            this.cargarReporteCorte();
+            this.cargarReporteIngresos();
+            this.cargarReporteDeudores();
+          }
           window.saeApi.toast('exito', `Contraseña de "${this._resetTarget.nombre}" restablecida. El usuario deberá cambiarla al iniciar sesión.`);
         } else {
           window.saeApi.toast('error', res.message || 'Error al restablecer la contraseña.');
