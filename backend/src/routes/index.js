@@ -21,6 +21,8 @@ const configuracionRoutes = require('./configuracion.routes');
 const reportesRoutes      = require('./reportes.routes');
 const tarifasRoutes       = require('./tarifas.routes');
 const planesRoutes        = require('./v1/planes.routes');
+const calificacionesExtraRoutes = require('./v1/calificaciones-extra.routes');
+const calificacionesTallerRoutes = require('./v1/calificaciones-taller.routes');
 
 const router = Router();
 
@@ -31,6 +33,8 @@ router.use('/tutores',       tutoresRoutes);
 router.use('/pagos',         pagosRoutes);
 router.use('/becas',         becasRoutes);
 router.use('/calificaciones',calificacionesRoutes);
+router.use('/calificaciones-extra', calificacionesExtraRoutes);
+router.use('/calificaciones-taller', calificacionesTallerRoutes);
 router.use('/usuarios',      usuariosRoutes);
 router.use('/grupos',        gruposRoutes);
 router.use('/bitacora',      bitacoraRoutes);

@@ -1,0 +1,84 @@
+const calificacionesTallerRepository = require('../../repositories/calificaciones/calificaciones-taller.repository');
+const prisma = require('../../config/database');
+
+async function registrarCalificacion({ alumnoId, numeroTrimestre, cicloId, valorCualitativo, usuarioId }) {
+  if (valorCualitativo !== 'A' && valorCualitativo !== 'NA' && valorCualitativo !== '') {
+    const err = new Error('Valor cualitativo inválido. Opciones: A, NA');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Resolver periodo real
+  const alumno = await prisma.alumno.findUnique({ where: { alumnoId: parseInt(alumnoId, 10) } });
+  if (!alumno) throw new Error('Alumno no encontrado.');
+
+  const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
+  if (!cicloActivo) throw new Error('No hay un ciclo escolar activo configurado en el sistema.');
+
+  const periodo = await prisma.periodoEvaluacion.findFirst({
+    where: {
+      nivelId: alumno.nivelId,
+      numero: parseInt(numeroTrimestre, 10),
+      cicloId: cicloActivo.cicloId
+    }
+  });
+
+  if (!periodo) {
+    const err = new Error(`No se encontró el periodo (Trimestre ${numeroTrimestre}) para el nivel de este alumno.`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const periodoId = periodo.periodoId;
+  const realCicloId = periodo.cicloId;
+
+  const existente = await calificacionesTallerRepository.findUnique(alumnoId, periodoId, realCicloId);
+  
+  if (existente) {
+    const err = new Error('Ya existe una calificación de Taller registrada para este alumno, periodo y ciclo escolar.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  return calificacionesTallerRepository.create({
+    alumnoId,
+    periodoId,
+    cicloId: realCicloId,
+    valorCualitativo,
+    registradaPor: usuarioId
+  });
+}
+
+async function obtenerPorAlumno(alumnoId) {
+  const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
+  if (!cicloActivo) return [];
+  
+  const calificaciones = await calificacionesTallerRepository.findByAlumno(alumnoId);
+  return calificaciones.filter(c => c.cicloId === cicloActivo.cicloId);
+}
+
+async function modificarCalificacion(id, { valorCualitativo, motivo, usuarioId }) {
+  if (!motivo || motivo.trim() === '') {
+    const err = new Error('Debe proporcionar un motivo para modificar una calificación registrada.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (valorCualitativo !== 'A' && valorCualitativo !== 'NA' && valorCualitativo !== '') {
+    const err = new Error('Valor cualitativo inválido. Opciones: A, NA');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return calificacionesTallerRepository.update(id, {
+    valorCualitativo,
+    modificadaMotivo: motivo,
+    registradaPor: usuarioId
+  });
+}
+
+module.exports = {
+  registrarCalificacion,
+  obtenerPorAlumno,
+  modificarCalificacion
+};
