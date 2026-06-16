@@ -156,17 +156,43 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
     }
   }
 
-  const grupo = await tx.grupo.create({
-    data: {
-      nombre,
-      nivelId,
-      cicloId,
-      grado,
-      seccion,
-      docenteTitularId,
-    },
-    include: INCLUDE_COMPLETO,
+  const existe = await tx.grupo.findFirst({
+    where: { cicloId, nivelId, grado, seccion }
   });
+
+  let grupo;
+  if (existe) {
+    if (!existe.eliminadoEn) {
+      throw Object.assign(new Error('Ya existe un grupo activo con ese nivel, grado y sección.'), { statusCode: 422 });
+    }
+    grupo = await tx.grupo.update({
+      where: { grupoId: existe.grupoId },
+      data: {
+        nombre,
+        docenteTitularId,
+        eliminadoEn: null,
+      },
+      include: INCLUDE_COMPLETO,
+    });
+    
+    // Limpiar materias anteriores porque es una "recreación"
+    await tx.grupoMateria.updateMany({
+      where: { grupoId: existe.grupoId, eliminadoEn: null },
+      data: { eliminadoEn: new Date() }
+    });
+  } else {
+    grupo = await tx.grupo.create({
+      data: {
+        nombre,
+        nivelId,
+        cicloId,
+        grado,
+        seccion,
+        docenteTitularId,
+      },
+      include: INCLUDE_COMPLETO,
+    });
+  }
 
   // Crear grupoMaterias si se especificaron
   if (materias && materias.length > 0) {
@@ -201,15 +227,31 @@ async function create(datos, auditCtx = {}) { return withAudit(auditCtx.usuarioI
         }
       }
 
-      await tx.grupoMateria.create({
-        data: {
-          grupoId:   grupo.grupoId,
-          materiaId: materiaReg.materiaId,
-          docenteId,
-          horario:   mat.horario ?? null,
-          aula:      mat.aula ?? null,
-        },
+      const gmExistente = await tx.grupoMateria.findFirst({
+        where: { grupoId: grupo.grupoId, materiaId: materiaReg.materiaId }
       });
+
+      if (gmExistente) {
+        await tx.grupoMateria.update({
+          where: { grupoMateriaId: gmExistente.grupoMateriaId },
+          data: {
+            docenteId,
+            horario: mat.horario ?? null,
+            aula: mat.aula ?? null,
+            eliminadoEn: null
+          }
+        });
+      } else {
+        await tx.grupoMateria.create({
+          data: {
+            grupoId:   grupo.grupoId,
+            materiaId: materiaReg.materiaId,
+            docenteId,
+            horario:   mat.horario ?? null,
+            aula:      mat.aula ?? null,
+          },
+        });
+      }
     }
   }
 
@@ -280,22 +322,38 @@ async function update(id, datos, auditCtx = {}) { return withAudit(auditCtx.usua
         if (typeof mat.docente === 'number') {
           docenteId = mat.docente;
         } else {
-          const doc = await tx.usuario.findFirst({
+          const u = await tx.usuario.findFirst({
             where: { nombreCompleto: { contains: mat.docente, mode: 'insensitive' }, eliminadoEn: null },
           });
-          docenteId = doc?.usuarioId ?? null;
+          docenteId = u?.usuarioId ?? null;
         }
       }
 
-      await tx.grupoMateria.create({
-        data: {
-          grupoId:   Number(id),
-          materiaId: materiaReg.materiaId,
-          docenteId,
-          horario:   mat.horario ?? null,
-          aula:      mat.aula ?? null,
-        },
+      const gmExistente = await tx.grupoMateria.findFirst({
+        where: { grupoId: Number(id), materiaId: materiaReg.materiaId }
       });
+
+      if (gmExistente) {
+        await tx.grupoMateria.update({
+          where: { grupoMateriaId: gmExistente.grupoMateriaId },
+          data: {
+            docenteId,
+            horario: mat.horario,
+            aula: mat.aula,
+            eliminadoEn: null
+          }
+        });
+      } else {
+        await tx.grupoMateria.create({
+          data: {
+            grupoId: Number(id),
+            materiaId: materiaReg.materiaId,
+            docenteId,
+            horario: mat.horario,
+            aula: mat.aula,
+          },
+        });
+      }
     }
   }
 

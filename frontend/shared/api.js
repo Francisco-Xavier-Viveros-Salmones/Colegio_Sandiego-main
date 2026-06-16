@@ -282,6 +282,12 @@
     modificar: function (id, datos) { return request('PUT', '/calificaciones-extra/' + id, datos); }
   };
 
+  var calificacionesTaller = {
+    porAlumno: function (alumnoId) { return request('GET', '/calificaciones-taller/alumno/' + alumnoId); },
+    registrar: function (datos) { return request('POST', '/calificaciones-taller', datos); },
+    modificar: function (id, datos) { return request('PUT', '/calificaciones-taller/' + id, datos); }
+  };
+
   // ── Módulo: Grupos ──────────────────────────────────────────────────────────
   var grupos = {
     listar:     function (nivel)       { return request('GET',  '/grupos' + (nivel ? '?nivel=' + nivel : '')); },
@@ -293,8 +299,16 @@
 
   // ── Módulo: Usuarios (Solo ADMIN) ───────────────────────────────────────────
   var usuarios = {
-    listar: function(incluirInactivos = false) {
-      return request('GET', '/usuarios' + (incluirInactivos ? '?incluirInactivos=true' : ''));
+    listar: function(params = false) {
+      var q = new URLSearchParams();
+      if (typeof params === 'boolean') {
+        if (params) q.append('incluirInactivos', 'true');
+      } else if (typeof params === 'object') {
+        if (params.incluirInactivos) q.append('incluirInactivos', 'true');
+        if (params.rol) q.append('rol', params.rol);
+      }
+      var qs = q.toString();
+      return request('GET', '/usuarios' + (qs ? '?' + qs : ''));
     },
     obtener:         function (id)          { return request('GET',    '/usuarios/' + id); },
     crear: function(datos) {
@@ -504,7 +518,7 @@
     getUsuario: getUsuario, setUsuario: setUsuario,
     // Módulos
     auth: auth, alumnos: alumnos, tutores: tutores, pagos: pagos, becas: becas,
-    calificaciones: calificaciones, calificacionesExtra: calificacionesExtra, grupos: grupos, usuarios: usuarios,
+    calificaciones: calificaciones, calificacionesExtra: calificacionesExtra, calificacionesTaller: calificacionesTaller, grupos: grupos, usuarios: usuarios,
     bitacora: bitacora, permisos: permisos, configuracion: configuracion,
     reportes: reportes,
     // Fetch directo

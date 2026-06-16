@@ -1,15 +1,9 @@
-const calificacionesExtraRepository = require('../../repositories/calificaciones/calificaciones-extra.repository');
+const calificacionesTallerRepository = require('../../repositories/calificaciones/calificaciones-taller.repository');
 const prisma = require('../../config/database');
 
-
-const CLUBES_VALIDOS = ['inglés', 'computación', 'danza'];
-
-/**
- * Registra una nueva calificación extracurricular
- */
-async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId, valorNumerico, usuarioId }) {
-  if (!CLUBES_VALIDOS.includes(club.toLowerCase())) {
-    const err = new Error('Club extracurricular inválido. Opciones: ' + CLUBES_VALIDOS.join(', '));
+async function registrarCalificacion({ alumnoId, numeroTrimestre, cicloId, valorCualitativo, usuarioId }) {
+  if (valorCualitativo !== 'A' && valorCualitativo !== 'NA' && valorCualitativo !== '') {
+    const err = new Error('Valor cualitativo inválido. Opciones: A, NA');
     err.statusCode = 400;
     throw err;
   }
@@ -38,51 +32,48 @@ async function registrarCalificacion({ alumnoId, club, numeroTrimestre, cicloId,
   const periodoId = periodo.periodoId;
   const realCicloId = periodo.cicloId;
 
-  // Verificar si ya existe
-  const existente = await calificacionesExtraRepository.findUnique(alumnoId, club, periodoId, realCicloId);
+  const existente = await calificacionesTallerRepository.findUnique(alumnoId, periodoId, realCicloId);
   
   if (existente) {
-    const err = new Error('Ya existe una calificación registrada para este alumno, club, periodo y ciclo escolar.');
+    const err = new Error('Ya existe una calificación de Taller registrada para este alumno, periodo y ciclo escolar.');
     err.statusCode = 409;
     throw err;
   }
 
-  // Crear registro
-  return calificacionesExtraRepository.create({
+  return calificacionesTallerRepository.create({
     alumnoId,
-    club,
     periodoId,
     cicloId: realCicloId,
-    valorNumerico,
+    valorCualitativo,
     registradaPor: usuarioId
   });
 }
 
-/**
- * Obtiene todas las calificaciones extracurriculares de un alumno
- */
 async function obtenerPorAlumno(alumnoId) {
   const cicloActivo = await prisma.cicloEscolar.findFirst({ where: { activo: true } });
-  if (!cicloActivo) return { data: [] };
+  if (!cicloActivo) return [];
   
-  const calificaciones = await calificacionesExtraRepository.findByAlumno(alumnoId);
+  const calificaciones = await calificacionesTallerRepository.findByAlumno(alumnoId);
   return calificaciones.filter(c => c.cicloId === cicloActivo.cicloId);
 }
 
-/**
- * Modifica una calificación extracurricular existente
- */
-async function modificarCalificacion(id, { valorNumerico, motivo, usuarioId }) {
+async function modificarCalificacion(id, { valorCualitativo, motivo, usuarioId }) {
   if (!motivo || motivo.trim() === '') {
     const err = new Error('Debe proporcionar un motivo para modificar una calificación registrada.');
     err.statusCode = 400;
     throw err;
   }
 
-  return calificacionesExtraRepository.update(id, {
-    valorNumerico,
+  if (valorCualitativo !== 'A' && valorCualitativo !== 'NA' && valorCualitativo !== '') {
+    const err = new Error('Valor cualitativo inválido. Opciones: A, NA');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return calificacionesTallerRepository.update(id, {
+    valorCualitativo,
     modificadaMotivo: motivo,
-    registradaPor: usuarioId // Opcional: registrar quién hizo la última modificación
+    registradaPor: usuarioId
   });
 }
 

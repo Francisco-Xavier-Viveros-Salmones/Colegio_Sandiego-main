@@ -575,7 +575,7 @@
               <div x-show="!alumnoSeleccionado">
                 <div class="mb-4 flex flex-wrap gap-3">
                   <input type="text" class="input-modern max-w-sm" placeholder="Buscar por nombre, matrícula o CURP..."
-                    x-model.debounce.500ms="busquedaAlumno" @input="_cargarAlumnosAPI(1)">
+                    x-model="busquedaAlumno" @input.debounce.400ms="_cargarAlumnosAPI(1)">
                   <select class="input-modern w-40" x-model="filtroEstadoAlumno" @change="_cargarAlumnosAPI(1)">
                     <option value="">Vista principal (Activos)</option>
                     <option value="Todos">Mostrar Todos</option>
@@ -720,6 +720,9 @@
                       :class="tabAlumnoFicha==='historial_pagos'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
                       @click="tabAlumnoFicha='historial_pagos'; _cargarPagosAlumnoFicha()"><i data-lucide="receipt"
                         class="w-4 h-4 mr-2"></i> Historial de Pagos</button>
+                    <button class="px-4 py-3 text-sm font-medium flex items-center"
+                      :class="tabAlumnoFicha==='calificaciones'?'text-navy-700 border-b-2 border-navy-700':'text-gray-500'"
+                      @click="tabAlumnoFicha='calificaciones'"><i data-lucide="graduation-cap" class="w-4 h-4 mr-2"></i> Calificaciones</button>
                   </div>
                   <!-- Pestaña: Expediente Escolar -->
                   <div class="p-5 space-y-4" x-show="tabAlumnoFicha==='academicos'">
@@ -785,94 +788,6 @@
                           por coma)</label>
                         <textarea class="input-modern" rows="2" x-model="alumnoFichaEditable.autorizados"></textarea>
                       </div>
-                    </div>
-                    <!-- Boleta Virtual -->
-                    <div class="mt-6 border-t pt-4">
-                      <div class="flex justify-between items-end mb-4">
-                        <h3 class="text-lg font-bold text-navy-800">Boleta Virtual (Historial Académico)</h3>
-                        <div class="text-right" x-show="historialAcademico.length > 0">
-                          <div class="text-xs text-gray-500">Promedio General</div>
-                          <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralFicha"></div>
-                        </div>
-                      </div>
-
-                      <div x-show="historialAcademico.length === 0"
-                        class="p-6 bg-gray-50 rounded-lg border border-gray-100 text-center">
-                        <i data-lucide="book-x" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
-                        <p class="text-gray-500 text-sm">El grupo de este alumno aún no tiene materias
-                          asignadas.<br>Asigne materias al grupo desde el módulo "Grupos & Materias" para poder
-                          calificar.</p>
-                      </div>
-
-                      <h4 class="font-bold text-navy-800 mt-6 mb-3 text-md" x-show="historialAcademico.length > 0">
-                        Materias Curriculares</h4>
-                      <div class="overflow-x-auto border border-gray-100 rounded-lg"
-                        x-show="historialAcademico.length > 0">
-                        <table class="w-full text-sm text-left">
-                          <thead class="bg-gray-50 text-gray-600">
-                            <tr>
-                              <th class="p-3 font-semibold">Materia</th>
-                              <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
-                              <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
-                              <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
-                              <th class="p-3 font-semibold text-center w-24">Promedio</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <template x-for="mat in historialAcademico" :key="mat.id">
-                              <tr class="border-b">
-                                <td class="p-3 font-medium text-gray-800" x-text="mat.nombre"></td>
-                                <td class="p-3 text-center"
-                                  x-text="mat.T1.v !== '' ? mat.T1.v : (mat.T1.t ? 'Obs. registradas' : '-')"></td>
-                                <td class="p-3 text-center"
-                                  x-text="mat.T2.v !== '' ? mat.T2.v : (mat.T2.t ? 'Obs. registradas' : '-')"></td>
-                                <td class="p-3 text-center"
-                                  x-text="mat.T3.v !== '' ? mat.T3.v : (mat.T3.t ? 'Obs. registradas' : '-')"></td>
-                                <td class="p-3 text-center font-bold"
-                                  :class="mat.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="mat.prom"></td>
-                              </tr>
-                            </template>
-                          </tbody>
-                        </table>
-                      </div>
-
-                      <div class="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
-                        <h4 class="font-bold text-navy-800 mb-3 text-md">Clubes Extracurriculares</h4>
-
-                        <div x-show="historialExtraBoleta.length === 0" class="p-4 bg-gray-50 rounded-lg text-center">
-                          <p class="text-gray-500 text-sm">El alumno no tiene calificaciones registradas en clubes
-                            extracurriculares.</p>
-                        </div>
-
-                        <div class="overflow-x-auto border border-gray-100 rounded-lg"
-                          x-show="historialExtraBoleta.length > 0">
-                          <table class="w-full text-sm text-left">
-                            <thead class="bg-gray-50 text-gray-600">
-                              <tr>
-                                <th class="p-3 font-semibold">Club Extracurricular</th>
-                                <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
-                                <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
-                                <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
-                                <th class="p-3 font-semibold text-center w-24">Promedio</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <template x-for="club in historialExtraBoleta" :key="club.id">
-                                <tr class="border-b">
-                                  <td class="p-3 font-medium text-gray-800 uppercase" x-text="club.nombre"></td>
-                                  <td class="p-3 text-center" x-text="club.T1.v !== '' ? club.T1.v : '-'"></td>
-                                  <td class="p-3 text-center" x-text="club.T2.v !== '' ? club.T2.v : '-'"></td>
-                                  <td class="p-3 text-center" x-text="club.T3.v !== '' ? club.T3.v : '-'"></td>
-                                  <td class="p-3 text-center font-bold"
-                                    :class="club.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="club.prom">
-                                  </td>
-                                </tr>
-                              </template>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-
                     </div>
                     <div class="flex justify-between items-center mt-6">
                       <div class="flex gap-2">
@@ -1172,6 +1087,141 @@
                           </table>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                  <!-- Pestaña: Calificaciones -->
+                  <div class="p-5" x-show="tabAlumnoFicha==='calificaciones'">
+                    <!-- Boleta Virtual -->
+                    <div class="mt-6 border-t pt-4">
+                      <div class="flex justify-between items-end mb-4">
+                        <div class="flex items-center gap-3">
+                          <h3 class="text-lg font-bold text-navy-800">Boleta Virtual (Historial Académico)</h3>
+                          <button class="btn-outline px-3 py-1 text-xs flex items-center" @click="seleccionarAlumnoFicha(alumnoActualFicha)">
+                            <i data-lucide="refresh-cw" class="w-3 h-3 mr-1"></i> Actualizar
+                          </button>
+                          <button class="btn-primary px-3 py-1 text-xs flex items-center" @click="view = 'calificaciones'; $nextTick(() => seleccionarAlumnoCalif(alumnoActualFicha))">
+                            <i data-lucide="edit" class="w-3 h-3 mr-1"></i> Editar
+                          </button>
+                        </div>
+                        <div class="text-right" x-show="historialAcademico.length > 0">
+                          <div class="text-xs text-gray-500">Promedio General</div>
+                          <div class="text-xl font-bold text-navy-800" x-text="promedioGeneralFicha"></div>
+                        </div>
+                      </div>
+
+                      <div x-show="historialAcademico.length === 0"
+                        class="p-6 bg-gray-50 rounded-lg border border-gray-100 text-center">
+                        <i data-lucide="book-x" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i>
+                        <p class="text-gray-500 text-sm">El grupo de este alumno aún no tiene materias
+                          asignadas.<br>Asigne materias al grupo desde el módulo "Grupos & Materias" para poder
+                          calificar.</p>
+                      </div>
+
+                      <h4 class="font-bold text-navy-800 mt-6 mb-3 text-md" x-show="historialAcademico.length > 0">
+                        Materias Curriculares</h4>
+                      <div class="overflow-x-auto border border-gray-100 rounded-lg"
+                        x-show="historialAcademico.length > 0">
+                        <table class="w-full text-sm text-left">
+                          <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                              <th class="p-3 font-semibold">Materia</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                              <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                              <th class="p-3 font-semibold text-center w-24">Promedio</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <template x-for="mat in historialAcademico" :key="mat.id">
+                              <tr class="border-b">
+                                <td class="p-3 font-medium text-gray-800" x-text="mat.nombre"></td>
+                                <td class="p-3 text-center"
+                                  x-text="mat.T1.v !== '' ? mat.T1.v : (mat.T1.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center"
+                                  x-text="mat.T2.v !== '' ? mat.T2.v : (mat.T2.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center"
+                                  x-text="mat.T3.v !== '' ? mat.T3.v : (mat.T3.t ? 'Obs. registradas' : '-')"></td>
+                                <td class="p-3 text-center font-bold"
+                                  :class="mat.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="mat.prom"></td>
+                              </tr>
+                            </template>
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div class="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
+                        <h4 class="font-bold text-navy-800 mb-3 text-md">Clubes Extracurriculares</h4>
+
+                        <div x-show="historialExtraBoleta.length === 0" class="p-4 bg-gray-50 rounded-lg text-center">
+                          <p class="text-gray-500 text-sm">El alumno no tiene calificaciones registradas en clubes
+                            extracurriculares.</p>
+                        </div>
+
+                        <div class="overflow-x-auto border border-gray-100 rounded-lg"
+                          x-show="historialExtraBoleta.length > 0">
+                          <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-600">
+                              <tr>
+                                <th class="p-3 font-semibold">Club Extracurricular</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                                <th class="p-3 font-semibold text-center w-24">Promedio</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template x-for="club in historialExtraBoleta" :key="club.id">
+                                <tr class="border-b">
+                                  <td class="p-3 font-medium text-gray-800 uppercase" x-text="club.nombre"></td>
+                                  <td class="p-3 text-center" x-text="club.T1.v !== '' ? club.T1.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="club.T2.v !== '' ? club.T2.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="club.T3.v !== '' ? club.T3.v : '-'"></td>
+                                  <td class="p-3 text-center font-bold"
+                                    :class="club.prom < 6 ? 'text-red-500' : 'text-emerald-600'" x-text="club.prom">
+                                  </td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      <!-- TABLA DE TALLER -->
+                      <div class="mt-8 pt-6 border-t-2 border-dashed border-gray-200">
+                        <h4 class="font-bold text-navy-800 mb-3 text-md">Taller</h4>
+
+                        <div x-show="historialTallerBoleta.length === 0" class="p-4 bg-gray-50 rounded-lg text-center">
+                          <p class="text-gray-500 text-sm">El alumno no tiene calificaciones registradas en Taller.</p>
+                        </div>
+
+                        <div class="overflow-x-auto border border-gray-100 rounded-lg"
+                          x-show="historialTallerBoleta.length > 0">
+                          <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-50 text-gray-600">
+                              <tr>
+                                <th class="p-3 font-semibold">Materia Taller</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                                <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                                <th class="p-3 font-semibold text-center w-24">Evaluación</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <template x-for="taller in historialTallerBoleta" :key="taller.id">
+                                <tr class="border-b">
+                                  <td class="p-3 font-medium text-gray-800 uppercase" x-text="taller.nombre"></td>
+                                  <td class="p-3 text-center" x-text="taller.T1.v !== '' ? taller.T1.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="taller.T2.v !== '' ? taller.T2.v : '-'"></td>
+                                  <td class="p-3 text-center" x-text="taller.T3.v !== '' ? taller.T3.v : '-'"></td>
+                                  <td class="p-3 text-center font-bold"
+                                    :class="taller.eval === 'NA' ? 'text-red-500' : 'text-emerald-600'" x-text="taller.eval"></td>
+                                </tr>
+                              </template>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
                     </div>
                   </div>
                 </div>
@@ -1522,7 +1572,7 @@
               <div>
                 <label class="text-xs font-medium text-gray-600">Alumno</label>
                 <input type="text" class="input-modern" placeholder="Nombre o matrícula..."
-                  x-model.debounce.500ms="busquedaCalif" @input="buscarAlumnoCalif">
+                  x-model="busquedaCalif" @input.debounce.400ms="buscarAlumnoCalif">
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-600">Nivel Escolar</label>
@@ -1560,7 +1610,12 @@
               <div class="flex justify-between items-end mb-4">
                 <div>
                   <div class="font-bold text-lg text-navy-700" x-text="alumnoActualCalif?.nombre"></div>
-                  <div class="text-sm text-gray-500" x-text="alumnoActualCalif?.grupo"></div>
+                  <div class="flex items-center gap-3 mt-1">
+                    <div class="text-sm text-gray-500" x-text="(typeof alumnoActualCalif?.grupo === 'object') ? `${alumnoActualCalif?.grupo?.grado || ''}° ${alumnoActualCalif?.grupo?.seccion || ''}`.trim() : alumnoActualCalif?.grupo"></div>
+                    <button class="btn-outline px-3 py-1 text-xs flex items-center" @click="view = 'alumnos'; tabDirectorio = 'alumnos'; tabAlumnoFicha = 'academicos'; $nextTick(() => seleccionarAlumnoFicha(alumnoActualCalif))">
+                      <i data-lucide="user" class="w-3 h-3 mr-1"></i> Ver expediente
+                    </button>
+                  </div>
                 </div>
                 <div class="text-right">
                   <span class="px-3 py-1 bg-navy-50 text-navy-700 rounded-full text-sm font-semibold"
@@ -1575,6 +1630,9 @@
                 <button class="pb-2 font-medium text-sm"
                   :class="tipoEvaluacionCalif==='extracurricular' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-400 hover:text-gray-600'"
                   @click="tipoEvaluacionCalif='extracurricular'">Extracurriculares (Clubes)</button>
+                <button class="pb-2 font-medium text-sm"
+                  :class="tipoEvaluacionCalif==='taller' ? 'text-navy-700 border-b-2 border-navy-700' : 'text-gray-400 hover:text-gray-600'"
+                  @click="tipoEvaluacionCalif='taller'">Taller</button>
               </div>
 
               <template x-if="tipoEvaluacionCalif==='curricular'">
@@ -1669,6 +1727,58 @@
                   <div class="flex justify-end gap-3 mt-5">
                     <button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button>
                     <button class="btn-primary" @click="guardarCalificacionExtraLote()">Guardar Clubes</button>
+                  </div>
+                </div>
+              </template>
+
+              <!-- TABLA DE TALLER -->
+              <template x-if="tipoEvaluacionCalif==='taller'">
+                <div>
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                      <thead class="bg-gray-50 text-gray-600">
+                        <tr>
+                          <th class="p-3 font-semibold rounded-tl-lg">Materia Taller</th>
+                          <th class="p-3 font-semibold text-center w-32">Trimestre 1</th>
+                          <th class="p-3 font-semibold text-center w-32">Trimestre 2</th>
+                          <th class="p-3 font-semibold text-center w-32">Trimestre 3</th>
+                          <th class="p-3 font-semibold text-center w-24 rounded-tr-lg">Evaluación</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr class="border-b">
+                          <td class="p-3 font-medium text-gray-800 uppercase">Taller</td>
+                          <td class="p-2">
+                            <select class="w-full input-modern text-center" x-model="tallerAlumno.T1.v">
+                              <option value=""></option>
+                              <option value="A">A</option>
+                              <option value="NA">NA</option>
+                            </select>
+                          </td>
+                          <td class="p-2">
+                            <select class="w-full input-modern text-center" x-model="tallerAlumno.T2.v">
+                              <option value=""></option>
+                              <option value="A">A</option>
+                              <option value="NA">NA</option>
+                            </select>
+                          </td>
+                          <td class="p-2">
+                            <select class="w-full input-modern text-center" x-model="tallerAlumno.T3.v">
+                              <option value=""></option>
+                              <option value="A">A</option>
+                              <option value="NA">NA</option>
+                            </select>
+                          </td>
+                          <td class="p-3 text-center font-bold"
+                            :class="calcularEvaluacionTaller() === 'NA' ? 'text-red-500' : (calcularEvaluacionTaller() === 'A' ? 'text-emerald-600' : 'text-gray-400')"
+                            x-text="calcularEvaluacionTaller()"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div class="flex justify-end gap-3 mt-5">
+                    <button class="btn-outline" @click="alumnoSeleccionadoCalif=false">Cancelar</button>
+                    <button class="btn-primary" @click="guardarCalificacionTallerLote()">Guardar Taller</button>
                   </div>
                 </div>
               </template>
@@ -2183,97 +2293,278 @@
            GRUPOS & MATERIAS – Vista jerárquica con expansión
            ============================================================ -->
     <template x-if="view==='grupos'">
-      <div>
+      <div class="h-full flex flex-col">
         <div class="flex justify-between items-center mb-4">
           <div>
             <h2 class="text-xl font-bold text-navy-800">Grupos y materias</h2>
-            <p class="text-sm text-gray-500 mt-1">Haz clic en un grupo para gestionar sus materias, docentes, horarios y
-              aulas.</p>
+            <p class="text-sm text-gray-500 mt-1">Gestiona los grupos, asigna docentes titulares y administra las materias.</p>
           </div>
           <button x-show="tienePermiso('grupos', 'escritura')" class="btn-primary" @click="abrirModalNuevoGrupo()">
             <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nuevo Grupo
           </button>
         </div>
 
-        <div class="space-y-3">
-          <template x-for="grupo in gruposData" :key="grupo.id">
-            <div class="card-clean overflow-hidden">
-              <!-- Encabezado del grupo (clickable) -->
-              <div class="group-row p-4 flex justify-between items-center cursor-pointer"
-                @click="grupoExpandido = (grupoExpandido === grupo.id ? null : grupo.id)">
-                <div class="flex items-center gap-3">
-                  <div class="w-10 h-10 rounded-xl bg-navy-50 flex items-center justify-center flex-shrink-0">
-                    <i data-lucide="book-open" class="w-5 h-5 text-navy-600"></i>
-                  </div>
-                  <div>
-                    <div class="font-bold text-navy-700" x-text="grupo.nombre"></div>
-                    <div class="text-sm text-gray-500 flex gap-4 mt-1">
-                      <div><span class="font-medium">Nivel:</span> <span x-text="grupo.nivel"></span></div>
-                      <div><span class="font-medium">Grado:</span> <span x-text="grupo.grado + '°'"></span></div>
-                      <div><span class="font-medium">Sección:</span> <span x-text="grupo.seccion"></span></div>
-                    </div>
-                    <div class="text-sm mt-2">
-                      Titular: <span class="text-gray-700" x-text="grupo.titular"></span>
-                      · <span x-text="grupo.alumnos"></span> alumnos
-                      · <span x-text="grupo.materias.length"></span> Materias asignadas
-                    </div>
-                  </div>
+        <!-- Barra de Filtros Globales -->
+        <div class="card-clean p-4 mb-4 flex gap-4 items-end bg-gray-50 border border-gray-200">
+          <div class="w-1/3">
+            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Nivel Educativo</label>
+            <select class="input-field" x-model="filtroGruposNivel" @change="filtroGruposGrado=''; filtroGruposGrupo=''">
+              <option value="">Todos los niveles</option>
+              <option value="PREESCOLAR">Preescolar</option>
+              <option value="PRIMARIA">Primaria</option>
+              <option value="SECUNDARIA">Secundaria</option>
+              <option value="BACHILLERATO">Bachillerato</option>
+            </select>
+          </div>
+          <div class="w-1/3">
+            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grado</label>
+            <select class="input-field" x-model="filtroGruposGrado" @change="filtroGruposGrupo=''">
+              <option value="">Todos los grados</option>
+              <template x-for="g in gradosDisponiblesFiltro()" :key="g">
+                <option :value="g" x-text="g + '° Grado'"></option>
+              </template>
+            </select>
+          </div>
+          <div class="w-1/3">
+            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Grupo / Sección</label>
+            <select class="input-field" x-model="filtroGruposGrupo">
+              <option value="">Todas las secciones</option>
+              <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+                <option :value="s" x-text="'Sección ' + s"></option>
+              </template>
+            </select>
+          </div>
+        </div>
+
+        <!-- Navegación por pestañas internas -->
+        <div class="flex border-b border-gray-200 mb-6">
+          <button class="px-6 py-3 font-medium text-sm transition-colors border-b-2"
+            :class="tabGruposMaterias==='grupos'?'border-navy-600 text-navy-800':'border-transparent text-gray-500 hover:text-gray-700'"
+            @click="tabGruposMaterias='grupos'">
+            <i data-lucide="users" class="w-4 h-4 inline mr-2"></i> Grupos y Docentes Titulares
+          </button>
+          <button class="px-6 py-3 font-medium text-sm transition-colors border-b-2"
+            :class="tabGruposMaterias==='materias'?'border-navy-600 text-navy-800':'border-transparent text-gray-500 hover:text-gray-700'"
+            @click="tabGruposMaterias='materias'">
+            <i data-lucide="book-open" class="w-4 h-4 inline mr-2"></i> Materias y Horarios
+          </button>
+        </div>
+
+        <!-- Pestaña 1: GRUPOS -->
+        <div x-show="tabGruposMaterias === 'grupos'" class="space-y-3">
+          <template x-for="grupo in gruposFiltradosList()" :key="grupo.id">
+            <div class="card-clean overflow-hidden p-4 flex justify-between items-center">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <span class="font-bold text-blue-700" x-text="grupo.grado + '° ' + grupo.seccion"></span>
                 </div>
-                <div class="flex items-center gap-3">
-                  <div class="flex gap-2 mr-3" x-show="tienePermiso('grupos', 'escritura')" @click.stop>
-                    <button class="btn-icon bg-white hover:bg-gray-100 shadow-sm rounded p-1"
-                      @click="abrirModalEditarGrupo(grupo)" title="Editar Grupo"><i data-lucide="edit"
-                        class="w-4 h-4 text-blue-600"></i></button>
-                    <button class="btn-icon bg-white hover:bg-gray-100 shadow-sm rounded p-1"
-                      @click="eliminarGrupoCRUD(grupo.id)" title="Eliminar Grupo"><i data-lucide="trash-2"
-                        class="w-4 h-4 text-crimson-600"></i></button>
+                <div>
+                  <div class="font-bold text-navy-700 text-lg" x-text="grupo.nombre"></div>
+                  <div class="text-sm text-gray-500 flex gap-4 mt-1">
+                    <span class="badge-navy" x-text="grupo.nivel"></span>
+                    <span><i data-lucide="users" class="w-3 h-3 inline mr-1"></i> <span x-text="grupo.alumnos"></span> alumnos</span>
+                    <span><i data-lucide="book" class="w-3 h-3 inline mr-1"></i> <span x-text="grupo.materias?.length || 0"></span> materias</span>
                   </div>
-                  <span class="badge-navy" x-text="grupo.nivel"></span>
-                  <i data-lucide="chevron-down" class="w-5 h-5 text-gray-400 chevron-icon"
-                    :class="grupoExpandido === grupo.id ? 'open' : ''"></i>
                 </div>
               </div>
 
-              <!-- Detalle expandido (tabla de materias) -->
-              <div x-show="grupoExpandido === grupo.id" x-cloak x-transition:enter="transition ease-out duration-200"
-                x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                class="border-t border-gray-100 bg-gray-50/60">
-                <div class="p-4">
-                  <div class="mb-3">
-                    <div class="text-sm font-semibold text-gray-700">
-                      Materias asignadas (<span x-text="grupo.materias.length"></span>)
+              <!-- Sección de Docente Titular (Solo Lectura) -->
+              <div class="w-1/3">
+                <label class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1 block">Docente Titular</label>
+                <div class="flex items-center gap-2 mt-1">
+                  <template x-if="grupo.titular">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs" x-text="grupo.titular.charAt(0)"></div>
+                      <span class="text-gray-800 font-medium" x-text="grupo.titular"></span>
                     </div>
-                  </div>
-                  <div class="bg-white rounded-xl overflow-hidden border border-gray-200">
-                    <table class="w-full text-sm">
-                      <thead class="bg-gray-50 border-b border-gray-200">
-                        <tr>
-                          <th class="p-3 text-left font-semibold text-gray-600">Materia</th>
-                          <th class="p-3 text-left font-semibold text-gray-600">Docente Titular</th>
-                          <th class="p-3 text-left font-semibold text-gray-600">Horario</th>
-                          <th class="p-3 text-left font-semibold text-gray-600">Aula</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <template x-for="(m, idx) in grupo.materias" :key="idx">
-                          <tr class="border-b last:border-b-0 hover:bg-gray-50">
-                            <td class="p-3 font-medium text-navy-700" x-text="m.materia"></td>
-                            <td class="p-3 text-gray-700" x-text="m.docente"></td>
-                            <td class="p-3 text-gray-500 text-xs" x-text="m.horario"></td>
-                            <td class="p-3"><span class="badge-navy" x-text="m.aula"></span></td>
-                          </tr>
-                        </template>
-                        <tr x-show="grupo.materias.length === 0">
-                          <td colspan="5" class="p-6 text-center text-sm text-gray-400">Sin materias asignadas</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
+                  </template>
+                  <template x-if="!grupo.titular">
+                    <span class="text-gray-400 italic">Sin titular asignado</span>
+                  </template>
                 </div>
+              </div>
+              
+              <!-- Acciones CRUD grupo -->
+              <div class="flex gap-2 ml-4 border-l border-gray-100 pl-4">
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-blue-600 rounded" @click="abrirModalEditarGrupo(grupo)"><i data-lucide="edit" class="w-4 h-4"></i></button>
+                <button class="btn-icon bg-gray-50 hover:bg-gray-100 text-red-600 rounded" @click="eliminarGrupoCRUD(grupo.id)"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
               </div>
             </div>
           </template>
+          
+          <div x-show="gruposFiltradosList().length === 0" class="text-center p-8 bg-gray-50 rounded-xl border border-gray-200">
+            <i data-lucide="search-x" class="w-12 h-12 text-gray-300 mx-auto mb-3"></i>
+            <h3 class="text-gray-500 font-medium">No se encontraron grupos</h3>
+            <p class="text-gray-400 text-sm mt-1">Ajusta los filtros globales para ver resultados.</p>
+          </div>
         </div>
+
+        <!-- Pestaña 2: MATERIAS -->
+        <div x-show="tabGruposMaterias === 'materias'">
+          
+          <div class="flex justify-end mb-4" x-show="tienePermiso('grupos', 'escritura')">
+            <button class="btn-primary" @click="abrirModalNuevaMateria()">
+              <i data-lucide="plus" class="w-4 h-4 mr-2 inline"></i> Nueva Materia
+            </button>
+          </div>
+
+          <!-- Listado de Materias -->
+          <div class="card-clean overflow-hidden">
+            <div class="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
+              <h3 class="font-bold text-gray-700">Materias Asignadas (<span x-text="materiasFiltradasList().length"></span>)</h3>
+            </div>
+            <table class="w-full text-sm text-left">
+              <thead class="bg-white border-b border-gray-200">
+                <tr>
+                  <th class="p-4 font-semibold text-gray-600">Materia</th>
+                  <th class="p-4 font-semibold text-gray-600">Docente</th>
+                  <th class="p-4 font-semibold text-gray-600">Grupo</th>
+                  <th class="p-4 font-semibold text-gray-600">Horario</th>
+                  <th class="p-4 font-semibold text-gray-600">Aula</th>
+                  <th class="p-4 font-semibold text-gray-600 w-16 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <template x-for="(m, idx) in materiasFiltradasList()" :key="idx">
+                  <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-4 font-bold text-navy-700" x-text="m.materia || m.nombre"></td>
+                    <td class="p-4">
+                      <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs" x-text="(m.docente||'S').charAt(0)"></div>
+                        <span class="text-gray-700" x-text="m.docente || 'Sin Asignar'"></span>
+                      </div>
+                    </td>
+                    <td class="p-4">
+                      <span class="badge-navy" x-text="m.grado + '° ' + m.seccion + ' ' + m.nivel"></span>
+                    </td>
+                    <td class="p-4 text-gray-500" x-text="m.horario || '-'"></td>
+                    <td class="p-4 text-gray-500" x-text="m.aula || '-'"></td>
+                    <td class="p-4 text-center">
+                      <button class="btn-icon text-blue-600 hover:bg-blue-50 rounded" @click="abrirModalEditarMateria(m)" x-show="tienePermiso('grupos', 'escritura')">
+                        <i data-lucide="edit" class="w-4 h-4"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+                <tr x-show="materiasFiltradasList().length === 0">
+                  <td colspan="6" class="p-8 text-center text-gray-400">
+                    <i data-lucide="book-x" class="w-10 h-10 mx-auto mb-2 text-gray-300"></i>
+                    No hay materias registradas para los filtros seleccionados.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+        </div>
+
+        <!-- ============================================================
+               MODAL NUEVA / EDITAR MATERIA
+               ============================================================ -->
+        <div x-show="modalMateria" class="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm" x-cloak>
+          <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden" @click.away="modalMateria = false">
+            
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 class="text-xl font-bold text-navy-800" x-text="materiaEditandoIndex !== null ? 'Editar Materia' : 'Nueva Materia'"></h3>
+              <button @click="modalMateria = false" class="text-gray-400 hover:text-gray-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <!-- Nombre Materia -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nombre de la Materia *</label>
+                  <input type="text" class="input-field" placeholder="Ej. Matemáticas" x-model="nuevaMateria.nombre">
+                </div>
+
+                <!-- Nivel, Grado, Grupo (Solo habilitados al crear) -->
+                <div class="md:col-span-2 grid grid-cols-3 gap-4" x-show="materiaEditandoIndex === null">
+                  <div>
+                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Nivel *</label>
+                    <select class="input-field" x-model="nuevaMateria.nivel" @change="nuevaMateria.grado=''; nuevaMateria.grupo=''">
+                      <option value="">Selecciona nivel...</option>
+                      <option value="PREESCOLAR">Preescolar</option>
+                      <option value="PRIMARIA">Primaria</option>
+                      <option value="SECUNDARIA">Secundaria</option>
+                      <option value="BACHILLERATO">Bachillerato</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Grado *</label>
+                    <select class="input-field" x-model="nuevaMateria.grado" @change="nuevaMateria.grupo=''">
+                      <option value="">Selecciona grado...</option>
+                      <template x-for="g in gradosDisponiblesFiltro(nuevaMateria.nivel)" :key="g">
+                        <option :value="g" x-text="g + '°'"></option>
+                      </template>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Sección *</label>
+                    <select class="input-field" x-model="nuevaMateria.grupo">
+                      <option value="">Selecciona sección...</option>
+                      <template x-for="s in seccionesDisponiblesFiltro()" :key="s">
+                        <option :value="s" x-text="s"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Autocompletado de Docente -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Docente Asignado *</label>
+                  <div class="relative" @click.away="mostrarDropdownDocenteMateria = false">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
+                    <input type="text" class="input-field pl-9" placeholder="Buscar maestro..." x-model="busquedaDocenteMateria" @input="buscarDocenteMateriaInput()" @focus="buscarDocenteMateriaInput()">
+                    <div x-show="mostrarDropdownDocenteMateria && resultadosDocenteMateria.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+                      <template x-for="r in resultadosDocenteMateria" :key="r.id">
+                        <div class="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer" @click="busquedaDocenteMateria = r.nombre; nuevaMateria.docente = r.nombre; mostrarDropdownDocenteMateria = false" x-text="r.nombre"></div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Horario: Días de la Semana -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-2 block">Días de impartición</label>
+                  <div class="flex flex-wrap gap-2">
+                    <template x-for="dia in diasSemana" :key="dia">
+                      <label class="inline-flex items-center p-2 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors" :class="nuevaMateria.dias.includes(dia) ? 'bg-blue-50 border-blue-200 text-blue-700' : 'text-gray-600'">
+                        <input type="checkbox" :value="dia" x-model="nuevaMateria.dias" class="hidden">
+                        <span class="text-sm font-medium select-none" x-text="dia"></span>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Horario: Horas -->
+                <div>
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Inicio</label>
+                  <input type="time" class="input-field" x-model="nuevaMateria.horaInicio">
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Hora de Fin</label>
+                  <input type="time" class="input-field" x-model="nuevaMateria.horaFin">
+                </div>
+
+                <!-- Aula -->
+                <div class="md:col-span-2">
+                  <label class="text-xs font-semibold text-gray-600 uppercase mb-1 block">Aula Asignada</label>
+                  <div class="relative">
+                    <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
+                    <input type="text" class="input-field pl-9" placeholder="Ej. Laboratorio 2, Salón 1A..." x-model="nuevaMateria.aula">
+                  </div>
+                </div>
+
+              </div>
+            </div>
+            
+            <div class="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
+              <button class="btn-outline" @click="modalMateria = false">Cancelar</button>
+              <button class="btn-primary" @click="guardarMateriaModal()">Guardar Materia</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </template>
 
@@ -2662,7 +2953,7 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div>
             <label class="text-xs font-medium text-gray-600 block mb-1">Nivel Educativo *</label>
-            <select class="input-modern" x-model="grupoTemp.nivel">
+            <select class="input-modern" x-model="grupoTemp.nivel" :disabled="grupoEditando" :class="grupoEditando ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''">
               <option value="">- Nivel -</option>
               <template x-for="n in nivelesDisponibles" :key="n">
                 <option :value="n" x-text="n"></option>
@@ -2671,7 +2962,7 @@
           </div>
           <div>
             <label class="text-xs font-medium text-gray-600 block mb-1">Grado *</label>
-            <select class="input-modern" x-model="grupoTemp.grado" :disabled="!grupoTemp.nivel">
+            <select class="input-modern" x-model="grupoTemp.grado" :disabled="!grupoTemp.nivel || grupoEditando" :class="grupoEditando ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''">
               <option value="">- Grado -</option>
               <template x-for="g in ['1','2','3','4','5','6']" :key="g">
                 <option :value="g" x-text="g + '°'"></option>
@@ -2681,49 +2972,21 @@
           <div>
             <label class="text-xs font-medium text-gray-600 block mb-1">Sección (Grupo) *</label>
             <input type="text" class="input-modern uppercase" maxlength="2" placeholder="Ej. A, B"
-              x-model="grupoTemp.seccion" oninput="this.value = this.value.toUpperCase()">
+              x-model="grupoTemp.seccion" oninput="this.value = this.value.toUpperCase()" :disabled="grupoEditando" :class="grupoEditando ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''">
           </div>
         </div>
         <div class="mb-6">
           <label class="text-xs font-medium text-gray-600 block mb-1">Docente Titular (Opcional)</label>
-          <input type="text" class="input-modern" placeholder="Nombre completo del titular..."
-            x-model="grupoTemp.titular">
-        </div>
-
-        <!-- Materias -->
-        <div class="border-t pt-4">
-          <div class="flex justify-between items-center mb-4">
-            <h4 class="font-bold text-navy-800">Materias Asignadas</h4>
-            <button class="btn-outline text-xs py-1" @click="agregarMateriaGrupo()"><i data-lucide="plus"
-                class="w-3 h-3 mr-1 inline"></i> Agregar Materia</button>
-          </div>
-          <div class="space-y-3">
-            <template x-for="(m, idx) in grupoTemp.materias" :key="idx">
-              <div class="grid grid-cols-12 gap-2 items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
-                <div class="col-span-3">
-                  <input type="text" class="input-modern text-sm" placeholder="Materia *" x-model="m.materia"
-                    x-init="if(!m.materia && m.nombre) m.materia = m.nombre;">
-                </div>
-                <div class="col-span-3">
-                  <input type="text" class="input-modern text-sm" placeholder="Docente" x-model="m.docente">
-                </div>
-                <div class="col-span-3">
-                  <input type="text" class="input-modern text-sm" placeholder="Horario" x-model="m.horario">
-                </div>
-                <div class="col-span-2">
-                  <input type="text" class="input-modern text-sm" placeholder="Aula" x-model="m.aula">
-                </div>
-                <div class="col-span-1 flex justify-center">
-                  <button class="text-crimson-500 hover:text-crimson-700" @click="eliminarMateriaGrupo(idx)"><i
-                      data-lucide="trash-2" class="w-4 h-4"></i></button>
-                </div>
-              </div>
-            </template>
-            <div x-show="grupoTemp.materias.length === 0"
-              class="text-sm text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
-              No hay materias asignadas a este grupo.
+          <div class="relative" @click.away="mostrarDropdownTitularModal = false">
+            <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-2.5"></i>
+            <input type="text" class="input-modern pl-9" placeholder="Buscar maestro titular..." x-model="busquedaTitularModal" @input="buscarTitularModalInput()" @focus="buscarTitularModalInput()">
+            <div x-show="mostrarDropdownTitularModal && resultadosTitularModal.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
+              <template x-for="r in resultadosTitularModal" :key="r.id">
+                <div class="px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer" @click="busquedaTitularModal = r.nombre; grupoTemp.titular = r.nombre; mostrarDropdownTitularModal = false" x-text="r.nombre"></div>
+              </template>
             </div>
           </div>
+          <p class="text-xs text-gray-400 mt-1">Busca y selecciona un usuario con rol Docente.</p>
         </div>
       </div>
       <div class="p-6 border-t bg-gray-50 flex justify-end gap-3 mt-auto">
@@ -3036,6 +3299,7 @@
         alumnoSeleccionado: false,
         alumnoActualFicha: null,
         historialExtraBoleta: [],
+        historialTallerBoleta: [],
         historialPagosAlumno: [],
         historialPagosTutor: [],
         estadoCuentaAlumno: [],
@@ -3086,7 +3350,189 @@
         nuevoAlumnoData: { nombre: '', matricula: '', curp: '', nivel: '', grado: '', grupoId: null, padre: '', telefono: '', tutorId: null },
         erroresNuevoAlumno: {},
 
-        // ── Ciclo Escolar y Tarifas (RF-30) ─────────────────────────────────────
+        // ── Grupos y Materias (Reestructuración) ────────────────────────────────
+        tabGruposMaterias: 'grupos',
+        filtroGruposNivel: '',
+        filtroGruposGrado: '',
+        filtroGruposGrupo: '',
+        modalMateria: false,
+        materiaEditandoIndex: null,
+        materiaEditandoGrupoId: null,
+        diasSemana: ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
+        nuevaMateria: { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '' },
+        busquedaDocenteMateria: '',
+        resultadosDocenteMateria: [],
+        mostrarDropdownDocenteMateria: false,
+        
+        async buscarDocenteMateriaInput() {
+          if (this.busquedaDocenteMateria.length < 2) {
+            this.resultadosDocenteMateria = [];
+            return;
+          }
+          this.resultadosDocenteMateria = await this.buscarDocenteAutocomplete(this.busquedaDocenteMateria);
+          this.mostrarDropdownDocenteMateria = true;
+        },
+        
+        gruposFiltradosList() {
+          return this.gruposData.filter(g => {
+            const mNivel = !this.filtroGruposNivel || g.nivel.toLowerCase() === this.filtroGruposNivel.toLowerCase();
+            const mGrado = !this.filtroGruposGrado || g.grado.toString() === this.filtroGruposGrado.toString();
+            const mGrupo = !this.filtroGruposGrupo || g.seccion.toLowerCase() === this.filtroGruposGrupo.toLowerCase();
+            return mNivel && mGrado && mGrupo;
+          });
+        },
+        materiasFiltradasList() {
+          const list = [];
+          this.gruposFiltradosList().forEach(g => {
+            if(g.materias) {
+              g.materias.forEach((m, index) => {
+                list.push({ ...m, grupoId: g.id, nivel: g.nivel, grado: g.grado, seccion: g.seccion, originalIndex: index });
+              });
+            }
+          });
+          return list;
+        },
+        gradosDisponiblesFiltro(nivelSelect) {
+          const n = (nivelSelect || this.filtroGruposNivel || '').toUpperCase();
+          if (n === 'PREESCOLAR' || n === 'SECUNDARIA') return ['1', '2', '3'];
+          return ['1', '2', '3', '4', '5', '6'];
+        },
+        seccionesDisponiblesFiltro() {
+          return ['A', 'B', 'C', 'D'];
+        },
+        async buscarDocenteAutocomplete(query) {
+          if (!query || query.trim().length < 2) return [];
+          const res = await window.saeApi.usuarios.listar({ rol: 'MAESTRA' });
+          if (res.ok) {
+            return res.data.filter(u => u.nombre.toLowerCase().includes(query.trim().toLowerCase()));
+          }
+          return [];
+        },
+        async vincularTitularGrupo(grupo, queryInput) {
+          let nombreDocente = null;
+          if (queryInput && queryInput.trim() !== '') {
+            const docentes = await this.buscarDocenteAutocomplete(queryInput);
+            const existe = docentes.find(d => d.nombre.toLowerCase() === queryInput.trim().toLowerCase());
+            if (!existe) {
+              return window.saeApi.toast('error', 'El usuario ingresado no existe o no es Docente.');
+            }
+            nombreDocente = existe.nombre;
+          }
+          
+          const res = await window.saeApi.grupos.actualizar(grupo.id, { titular: nombreDocente });
+          if (res.ok) {
+            grupo.titular = nombreDocente || '';
+            window.saeApi.toast('exito', nombreDocente ? 'Docente vinculado correctamente al grupo.' : 'Docente removido correctamente.');
+            this._cargarGruposAPI();
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al actualizar titular');
+          }
+        },
+        abrirModalNuevaMateria() {
+          this.materiaEditandoIndex = null;
+          this.materiaEditandoGrupoId = null;
+          this.nuevaMateria = { nombre: '', docente: '', horario: '', aula: '', grado: '', grupo: '', nivel: '', dias: [], horaInicio: '', horaFin: '' };
+          this.busquedaDocenteMateria = '';
+          this.resultadosDocenteMateria = [];
+          this.modalMateria = true;
+          this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+        },
+        abrirModalEditarMateria(materia) {
+          this.materiaEditandoIndex = materia.originalIndex;
+          this.materiaEditandoGrupoId = materia.grupoId;
+          
+          let diasParsed = [];
+          let hInicio = '';
+          let hFin = '';
+          
+          if (materia.horario) {
+            // Intento parsear "Lun, Mar 08:00-10:00"
+            const parts = materia.horario.split(' ');
+            const horas = parts[parts.length - 1]; // "08:00-10:00" o "08:00"
+            if (horas && horas.includes('-')) {
+              hInicio = horas.split('-')[0];
+              hFin = horas.split('-')[1];
+            }
+            diasParsed = this.diasSemana.filter(d => materia.horario.includes(d));
+          }
+
+          this.nuevaMateria = { 
+            nombre: materia.materia || materia.nombre, 
+            docente: materia.docente, 
+            horario: materia.horario, 
+            aula: materia.aula, 
+            grado: materia.grado.toString(), 
+            grupo: materia.seccion, 
+            nivel: materia.nivel,
+            dias: diasParsed,
+            horaInicio: hInicio,
+            horaFin: hFin
+          };
+          this.busquedaDocenteMateria = materia.docente || '';
+          this.resultadosDocenteMateria = [];
+          this.modalMateria = true;
+          this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
+        },
+        async guardarMateriaModal() {
+          const { nombre, docente, aula, grado, grupo, nivel, dias, horaInicio, horaFin } = this.nuevaMateria;
+          if (!nombre || !docente || !grado || !grupo || !nivel) return window.saeApi.toast('advertencia', 'Nombre, Docente, Nivel, Grado y Grupo son obligatorios.');
+          
+          const docentes = await this.buscarDocenteAutocomplete(docente);
+          const existe = docentes.find(d => d.nombre.toLowerCase() === docente.trim().toLowerCase());
+          if (!existe) {
+            return window.saeApi.toast('error', 'El docente ingresado no existe o no tiene el rol correcto (Docente).');
+          }
+
+          let horarioString = '';
+          if (dias.length > 0 && horaInicio && horaFin) {
+            horarioString = `${dias.join(', ')} ${horaInicio}-${horaFin}`;
+          }
+
+          let grupoTarget;
+          if (this.materiaEditandoGrupoId) {
+             grupoTarget = this.gruposData.find(g => g.id === this.materiaEditandoGrupoId);
+          } else {
+             grupoTarget = this.gruposData.find(g => 
+               g.grado.toString() === grado.toString() && 
+               g.seccion.toLowerCase() === grupo.toLowerCase() &&
+               g.nivel.toLowerCase() === nivel.toLowerCase()
+             );
+          }
+
+          if (!grupoTarget) return window.saeApi.toast('error', 'No se encontró un grupo en el sistema con ese Nivel, Grado y Sección.');
+
+          const materiasActuales = grupoTarget.materias.map(m => ({
+            nombre: m.materia || m.nombre,
+            docente: m.docente,
+            horario: m.horario,
+            aula: m.aula
+          }));
+
+          if (this.materiaEditandoIndex !== null) {
+            materiasActuales[this.materiaEditandoIndex] = {
+              nombre: nombre,
+              docente: existe.nombre,
+              horario: horarioString || this.nuevaMateria.horario,
+              aula: aula
+            };
+          } else {
+            materiasActuales.push({
+              nombre: nombre,
+              docente: existe.nombre,
+              horario: horarioString || this.nuevaMateria.horario,
+              aula: aula
+            });
+          }
+
+          const res = await window.saeApi.grupos.actualizar(grupoTarget.id, { materias: materiasActuales });
+          if (res.ok) {
+            window.saeApi.toast('exito', `Materia ${this.materiaEditandoIndex !== null ? 'actualizada' : 'creada y vinculada'} correctamente.`);
+            this.modalMateria = false;
+            this._cargarGruposAPI();
+          } else {
+            window.saeApi.toast('error', res.message || 'Error al guardar materia');
+          }
+        },
         modalNuevoCiclo: false,
         nuevoCicloData: { nombre: '', activo: true },
         ciclosDisponibles: [],
@@ -3124,9 +3570,24 @@
         modalGrupo: false,
         grupoEditando: false,
         grupoTemp: { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [] },
+        busquedaTitularModal: '',
+        resultadosTitularModal: [],
+        mostrarDropdownTitularModal: false,
+
+        async buscarTitularModalInput() {
+          if (this.busquedaTitularModal.length < 2) {
+            this.resultadosTitularModal = [];
+            return;
+          }
+          this.resultadosTitularModal = await this.buscarDocenteAutocomplete(this.busquedaTitularModal);
+          this.mostrarDropdownTitularModal = true;
+        },
+
         abrirModalNuevoGrupo() {
           this.grupoEditando = false;
           this.grupoTemp = { id: null, nivel: '', grado: '', seccion: '', titular: '', materias: [] };
+          this.busquedaTitularModal = '';
+          this.resultadosTitularModal = [];
           this.modalGrupo = true;
           this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
         },
@@ -3134,12 +3595,14 @@
           this.grupoEditando = true;
           this.grupoTemp = {
             id: g.id,
-            nivel: g.nivel || '',
+            nivel: g.nivel ? g.nivel.charAt(0).toUpperCase() + g.nivel.slice(1).toLowerCase() : '',
             grado: g.grado || '',
             seccion: g.seccion || '',
             titular: g.titular || '',
             materias: g.materias ? JSON.parse(JSON.stringify(g.materias)) : []
           };
+          this.busquedaTitularModal = g.titular || '';
+          this.resultadosTitularModal = [];
           this.modalGrupo = true;
           this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
         },
@@ -3315,6 +3778,7 @@
           const res = await window.saeApi.grupos.listar();
           if (res.ok && res.data) {
             this.gruposData = res.data.map(window.saeApi.mapGrupo);
+            this.$nextTick(() => { if (window.lucide) window.lucide.createIcons(); });
           } else if (!res.offline) {
             window.saeApi.toast('error', res.message || 'Error al cargar grupos.');
           }
@@ -4054,7 +4518,7 @@
               this.tutoresAlumnoFicha = [];
               this.historialPagosAlumno = [];
               this.alumnoSeleccionado = true;
-              this.tabAlumnoFicha = 'academicos';
+              this.tabAlumnoFicha = (this.alumnoActualFicha && this.alumnoActualFicha.id === al.id) ? this.tabAlumnoFicha : 'academicos';
               // Asegurarse de tener las becas cargadas
               if (this.becasAsignadas.length === 0) this.cargarBecasAsignadas();
 
@@ -4077,7 +4541,7 @@
                       const mat = materiasArr.find(x => x.id === c.grupoMateriaId);
                       if (mat) {
                         const k = String(c.periodo).includes('1') ? 'T1' : String(c.periodo).includes('2') ? 'T2' : 'T3';
-                        mat[k].v = c.valor || '';
+                        mat[k].v = (c.valor !== null && c.valor !== undefined) ? c.valor : '';
                         mat[k].t = c.textoObservacion || '';
                       }
                     });
@@ -4134,6 +4598,32 @@
                   });
                 }
               } catch (e) { console.error('Error al cargar extracurriculares:', e); }
+
+              // Cargar taller
+              this.historialTallerBoleta = [];
+              try {
+                const resTaller = await window.saeApi.calificacionesTaller.porAlumno(al.id);
+                if (resTaller && resTaller.data) {
+                  const tallerObj = { id: 'taller', nombre: 'Taller', T1: { v: '' }, T2: { v: '' }, T3: { v: '' } };
+                  resTaller.data.forEach(c => {
+                    const num = c.periodo?.numero;
+                    let key = null;
+                    if (num === 1) key = 'T1';
+                    if (num === 2) key = 'T2';
+                    if (num === 3) key = 'T3';
+                    if (key) {
+                      tallerObj[key].v = c.valorCualitativo;
+                    }
+                  });
+                  if (tallerObj.T1.v || tallerObj.T2.v || tallerObj.T3.v) {
+                    const vals = [tallerObj.T1.v, tallerObj.T2.v, tallerObj.T3.v].filter(x => x === 'A' || x === 'NA');
+                    const countA = vals.filter(x => x === 'A').length;
+                    const countNA = vals.filter(x => x === 'NA').length;
+                    tallerObj.eval = vals.length > 0 ? (countA >= countNA ? 'A' : 'NA') : '-';
+                    this.historialTallerBoleta = [tallerObj];
+                  }
+                }
+              } catch (e) { console.error('Error al cargar taller:', e); }
 
             } else {
               console.error('Error al obtener expediente', res);
@@ -4289,10 +4779,12 @@
             { id: 'computación', nombre: 'Computación', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' },
             { id: 'danza', nombre: 'Danza', T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null }, prom: '-' }
           ];
+          this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
 
           this.busquedaCalif = '';
 
           this.cargarHistorialExtra();
+          this.cargarHistorialTaller();
 
           // Cargar materias del grupo para obtener IDs
           if (al.grupoId) {
@@ -4310,7 +4802,7 @@
                 const mat = this.materiasAlumno.find(m => m.id === c.grupoMateriaId);
                 if (mat) {
                   const k = String(c.periodo).includes('1') ? 'T1' : String(c.periodo).includes('2') ? 'T2' : 'T3';
-                  mat[k].v = c.valor || '';
+                  mat[k].v = (c.valor !== null && c.valor !== undefined) ? c.valor : '';
                   mat[k].t = c.textoObservacion || '';
                 }
               });
@@ -4324,9 +4816,14 @@
             if (this.esPreescolar) { mat.prom = 'N/A'; }
             else {
               let s = 0, c = 0;
-              if (mat.T1.v !== '') { s += parseFloat(mat.T1.v); c++; }
-              if (mat.T2.v !== '') { s += parseFloat(mat.T2.v); c++; }
-              if (mat.T3.v !== '') { s += parseFloat(mat.T3.v); c++; }
+              ['T1', 'T2', 'T3'].forEach(t => {
+                if (mat[t].v !== '') {
+                  let v = parseFloat(mat[t].v);
+                  if (v > 10) { mat[t].v = 10; v = 10; }
+                  if (v < 0) { mat[t].v = 0; v = 0; }
+                  s += v; c++;
+                }
+              });
               if (c > 0) {
                 mat.prom = (s / c).toFixed(1);
                 sumGral += parseFloat(mat.prom);
@@ -4371,7 +4868,6 @@
 
           const res = await window.saeApi.calificaciones.guardarLote(lote);
           if (res.ok) {
-            this.alumnoSeleccionadoCalif = false;
             window.saeApi.toast('exito', `${lote.length} calificación(es) guardada(s) para ${this.alumnoActualCalif.nombre}.`);
           } else {
             window.saeApi.toast('error', res.message || 'Error al guardar calificaciones.');
@@ -4411,9 +4907,14 @@
         recalcularPromediosExtra() {
           this.clubesAlumno.forEach(club => {
             let s = 0, c = 0;
-            if (club.T1.v !== '') { s += parseFloat(club.T1.v); c++; }
-            if (club.T2.v !== '') { s += parseFloat(club.T2.v); c++; }
-            if (club.T3.v !== '') { s += parseFloat(club.T3.v); c++; }
+            ['T1', 'T2', 'T3'].forEach(t => {
+              if (club[t].v !== '') {
+                let v = parseFloat(club[t].v);
+                if (v > 10) { club[t].v = 10; v = 10; }
+                if (v < 0) { club[t].v = 0; v = 0; }
+                s += v; c++;
+              }
+            });
             if (c > 0) { club.prom = (s / c).toFixed(1); }
             else { club.prom = '-'; }
           });
@@ -4436,7 +4937,6 @@
                       alumnoId: this.alumnoActualCalif.id,
                       club: club.id,
                       numeroTrimestre: i + 1,
-                      cicloId: window.saeApi.CICLO_ACTIVO_ID || 1,
                       valorNumerico: val
                     }));
                   }
@@ -4492,6 +4992,80 @@
           } catch (e) {
             window.saeApi.toast('error', e.message || 'Error al modificar.');
           }
+        },
+
+        async cargarHistorialTaller() {
+          if (!this.alumnoActualCalif) return;
+          try {
+            const res = await window.saeApi.calificacionesTaller.porAlumno(this.alumnoActualCalif.id);
+            if (res && res.data) {
+              this.tallerAlumno = { T1: { v: '', orig: null, califId: null }, T2: { v: '', orig: null, califId: null }, T3: { v: '', orig: null, califId: null } };
+              
+              res.data.forEach(c => {
+                const num = c.periodo?.numero;
+                let key = null;
+                if (num === 1) key = 'T1';
+                if (num === 2) key = 'T2';
+                if (num === 3) key = 'T3';
+
+                if (key) {
+                  this.tallerAlumno[key].v = c.valorCualitativo || '';
+                  this.tallerAlumno[key].orig = c.valorCualitativo || '';
+                  this.tallerAlumno[key].califId = c.calificacionTallerId;
+                }
+              });
+            }
+          } catch (e) { console.error(e); }
+        },
+        async guardarCalificacionTallerLote() {
+          if (!this.alumnoActualCalif) return;
+          const promesas = [];
+          
+          ['T1', 'T2', 'T3'].forEach((t, i) => {
+            const valStr = this.tallerAlumno[t].v;
+            if (valStr !== '') {
+              if (this.tallerAlumno[t].califId) {
+                if (valStr !== this.tallerAlumno[t].orig) {
+                  promesas.push(window.saeApi.calificacionesTaller.modificar(this.tallerAlumno[t].califId, { valorCualitativo: valStr, motivo: 'Actualización en lote desde panel' }));
+                }
+              } else {
+                promesas.push(window.saeApi.calificacionesTaller.registrar({
+                  alumnoId: this.alumnoActualCalif.id,
+                  numeroTrimestre: i + 1,
+                  valorCualitativo: valStr
+                }));
+              }
+            }
+          });
+
+          if (promesas.length === 0) {
+            window.saeApi.toast('advertencia', 'No hay calificaciones de Taller para guardar o no se detectaron cambios.');
+            return;
+          }
+
+          try {
+            const resultados = await Promise.all(promesas);
+            const errores = resultados.filter(r => r && (!r.success && !r.ok));
+
+            if (errores.length > 0) {
+              window.saeApi.toast('error', errores[0].message || 'Error al guardar calificaciones de Taller.');
+            } else {
+              window.saeApi.toast('exito', 'Calificaciones de Taller guardadas correctamente.');
+            }
+            await this.cargarHistorialTaller();
+          } catch (e) {
+            window.saeApi.toast('error', 'Hubo un error de conexión al guardar calificaciones de Taller.');
+            await this.cargarHistorialTaller();
+          }
+        },
+        calcularEvaluacionTaller() {
+          const t = this.tallerAlumno;
+          if (!t) return '-';
+          const vals = [t?.T1?.v, t?.T2?.v, t?.T3?.v].filter(x => x === 'A' || x === 'NA');
+          if (vals.length === 0) return '-';
+          const countA = vals.filter(x => x === 'A').length;
+          const countNA = vals.filter(x => x === 'NA').length;
+          return countA >= countNA ? 'A' : 'NA';
         },
 
         // ── Becas ────────────────────────────────────────────────────────────────
