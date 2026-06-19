@@ -427,6 +427,7 @@
           <span class="text-sm text-gray-400" x-text="fechaActual"></span>
           
 
+
           <button x-show="tienePermiso('pagos', 'escritura') && (view === 'dashboard' || view === 'pagos')"
             class="btn-primary text-sm" @click="abrirModalPago()">+ Pago rápido</button>
         </div>
@@ -1525,8 +1526,10 @@
         <!-- CALIFICACIONES -->
         <template x-if="view==='calificaciones'">
           <div x-init="buscarAlumnoCalif()">
-            <h2 class="text-xl font-bold text-navy-800 mb-3">Calificaciones
-              — Buscador inteligente</h2>
+            <h2 class="text-xl font-bold text-navy-800 mb-3 flex items-center">
+              Calificaciones — Buscador inteligente
+              <span class="text-sm font-normal text-gray-500 ml-2" x-show="!alumnoSeleccionadoCalif" x-text="`(${alumnosCoincidencias.length} alumnos)`"></span>
+            </h2>
 
             <div class="grid md:grid-cols-4 gap-4 mb-5" x-show="!alumnoSeleccionadoCalif">
               <div>
@@ -2239,10 +2242,10 @@
               <div class="text-xs text-gray-500">Pagos registrados</div>
               <div class="text-2xl font-bold text-emerald-700" x-text="reporteCorte?.cantidadPagos || 0"></div>
             </div>
-            <div class="bg-amber-50 p-4 rounded-xl text-center">
-              <div class="text-xs text-gray-500">Efectivo</div>
-              <div class="text-2xl font-bold text-amber-700"
-                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.efectivo || 0).toLocaleString('es-MX')"></div>
+            <div class="bg-indigo-50 p-4 rounded-xl text-center">
+              <div class="text-xs text-gray-500">Transferencia</div>
+              <div class="text-2xl font-bold text-indigo-700"
+                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.transferencia || 0).toLocaleString('es-MX')"></div>
             </div>
           </div>
           <table class="w-full text-sm">
@@ -2429,9 +2432,19 @@
             <h3 class="font-semibold text-gray-800 mb-3">Montos Configurables</h3>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <label class="text-xs font-medium text-gray-600">Colegiatura Mensual</label>
+                <label class="text-xs font-medium text-gray-600">Colegiatura Anual Total</label>
                 <input type="number" class="input-modern mt-1" x-model="configTarifas.conceptos.colegiatura"
                   :disabled="!configTarifas.cicloActivo">
+                <div x-show="configTarifas.conceptos.colegiatura > 0" class="mt-2 text-[10px] text-gray-500 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <div class="flex justify-between mb-1">
+                    <span>A 10 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 10).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>A 12 meses:</span> 
+                    <span class="font-semibold text-gray-700" x-text="'$' + (Number(configTarifas.conceptos.colegiatura) / 12).toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})"></span>
+                  </div>
+                </div>
               </div>
               <div>
                 <label class="text-xs font-medium text-gray-600">Inscripción Anual</label>
@@ -3057,9 +3070,19 @@
           </div>
         </div>
 
-        <div>
-          <label class="text-xs font-medium text-gray-600">Fecha</label>
-          <input type="date" class="input-modern" x-model="nuevoPago.fecha">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-medium text-gray-600">Fecha</label>
+            <input type="date" class="input-modern" x-model="nuevoPago.fecha">
+          </div>
+          <div>
+            <label class="text-xs font-medium text-gray-600">Método de pago</label>
+            <select class="input-modern" x-model="nuevoPago.metodoPago">
+              <option value="transferencia">Transferencia</option>
+              <option value="tarjeta_debito">Tarjeta de débito</option>
+              <option value="tarjeta_credito">Tarjeta de crédito</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -3599,6 +3622,9 @@
         _resetNuevaPassword: '',
         verInactivos: false,
         cargando: false,
+
+        notificaciones: [],
+        notificacionesNoLeidas: 0,
 
         // ── Rol del usuario ────────────────────────────────────────────────────
         rol: window.saeApi.getUsuario()?.rol || 'MAESTRA',
@@ -5226,7 +5252,7 @@
           }
         },
         abrirModalPagoConsolidado() {
-          this.pagoConsolidadoTemp = { metodo: 'efectivo', comprobante: null, abonos: {} };
+          this.pagoConsolidadoTemp = { metodo: 'transferencia', comprobante: null, abonos: {} };
           // Por defecto asignamos abonos automáticos para liquidar todo o podemos dejar que el usuario asigne
           for (const item of this.estadoCuentaConsolidado) {
             this.pagoConsolidadoTemp.abonos[item.calendarioPagoId] = item.saldoPendiente;
@@ -6352,9 +6378,9 @@
           this.busquedaPagoAlumno = '';
           this.pagoCoincidencias = [];
           this.mostrarSugerenciasPago = false;
-          this.nuevoPago = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0, 10), becaInfo: null, tipoPago: 'normal', mesesAdelantar: 1 };
+          this.nuevoPago = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0, 10), becaInfo: null, tipoPago: 'normal', mesesAdelantar: 1, metodoPago: 'transferencia' };
         },
-        filtrarPagoAlumnos() {
+        async filtrarPagoAlumnos() {
           const q = this.busquedaPagoAlumno.trim().toLowerCase();
           if (!q) {
             this.pagoCoincidencias = [];
@@ -6363,9 +6389,17 @@
             this.nuevoPago.alumnoId = null;
             return;
           }
-          this.pagoCoincidencias = this.listaAlumnos
-            .filter(a => a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q))
-            .slice(0, 8);
+          try {
+            const res = await window.saeApi.alumnos.listar({ q: q, limit: 10 });
+            if (res.ok) {
+              const data = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+              this.pagoCoincidencias = data.map(window.saeApi.mapAlumno);
+            } else {
+              this.pagoCoincidencias = [];
+            }
+          } catch (e) {
+            this.pagoCoincidencias = [];
+          }
           this.mostrarSugerenciasPago = true;
           if (this.nuevoPago.alumno && this.busquedaPagoAlumno !== this.nuevoPago.alumno) {
             this.nuevoPago.alumno = '';
@@ -6445,12 +6479,13 @@
           if (!this.nuevoPago.alumnoId) return;
           const numMeses = parseInt(this.nuevoPago.mesesAdelantar) || 1;
 
+          const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
+          
           let montoMensual = 0;
-          if (this.alumnoPagoInfo?.planPago?.montoMensual) {
-            montoMensual = Number(this.alumnoPagoInfo.planPago.montoMensual);
+          if (colegiaturas.length > 0) {
+            montoMensual = Number(colegiaturas[0].montoOriginal);
           }
 
-          const colegiaturas = this.pagoAdeudos.filter(a => a.concepto.toLowerCase() === 'colegiatura');
           const aAdelantar = colegiaturas.slice(0, numMeses);
           let total = 0;
 
@@ -6575,7 +6610,7 @@
             res = await window.saeApi.pagos.adelantado({
               alumnoId: this.nuevoPago.alumnoId,
               meses: parseInt(this.nuevoPago.mesesAdelantar),
-              metodoPago: 'efectivo',
+              metodoPago: this.nuevoPago.metodoPago,
               fecha: this.nuevoPago.fecha,
               monto: parseFloat(this.nuevoPago.monto)
             });
@@ -6586,6 +6621,7 @@
               concepto,
               monto: parseFloat(this.nuevoPago.monto),
               fecha: this.nuevoPago.fecha,
+              metodoPago: this.nuevoPago.metodoPago,
             });
           }
           if (res.ok) {
@@ -6724,7 +6760,7 @@
             if (res.ok && res.data) {
               this.configTarifas.conceptos = { colegiatura: '', inscripcion: '', arancel: '', material: '' };
               res.data.forEach(t => {
-                if (t.concepto === 'colegiatura') this.configTarifas.conceptos.colegiatura = t.monto;
+                if (t.concepto === 'colegiatura') this.configTarifas.conceptos.colegiatura = Number(t.monto) * 10;
                 if (t.concepto === 'inscripcion') this.configTarifas.conceptos.inscripcion = t.monto;
                 if (t.concepto === 'arancel') this.configTarifas.conceptos.arancel = t.monto;
                 if (t.concepto === 'material') this.configTarifas.conceptos.material = t.monto;
@@ -6746,7 +6782,11 @@
               window.saeApi.toast('error', `El monto para ${key} es inválido. Debe ser mayor a 0.`);
               return;
             }
-            conceptosArray.push({ concepto: key, monto: Number(val) });
+            let montoToSave = Number(val);
+            if (key === 'colegiatura') {
+              montoToSave = montoToSave / 10;
+            }
+            conceptosArray.push({ concepto: key, monto: montoToSave });
           }
 
           this.cargando = true;
@@ -6870,7 +6910,12 @@
           if (this.tienePermiso('alumnos', 'lectura')) {
             cargasIniciales.push(this._cargarAlumnosAPI());
           }
+
+          cargasIniciales.push(this.cargarNotificaciones());
+
           await Promise.all(cargasIniciales);
+
+          setInterval(() => this.cargarNotificaciones(), 60000);
 
           // Cargar datos del dashboard si tiene algún permiso financiero/admin
           if (this.tienePermiso('pagos', 'lectura') || this.esGestor()) {
@@ -6887,6 +6932,30 @@
 
           this.$watch('grupoExpandido', () => this.$nextTick(safeIcons));
           this.$nextTick(safeIcons);
+        },
+
+        async cargarNotificaciones() {
+          if (!window.saeApi || !window.saeApi.auth.getToken()) return;
+          try {
+            const res = await fetch('/api/v1/notificaciones', {
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            const data = await res.json();
+            if (res.ok && data.data) {
+              this.notificaciones = data.data.notificaciones || [];
+              this.notificacionesNoLeidas = data.data.noLeidas || 0;
+            }
+          } catch (err) { console.error(err); }
+        },
+
+        async marcarNotificacionLeida(id) {
+          try {
+            await fetch('/api/v1/notificaciones/' + id + '/leida', {
+              method: 'PATCH',
+              headers: { 'Authorization': 'Bearer ' + window.saeApi.auth.getToken() }
+            });
+            await this.cargarNotificaciones();
+          } catch (err) { console.error(err); }
         },
       }));
     });

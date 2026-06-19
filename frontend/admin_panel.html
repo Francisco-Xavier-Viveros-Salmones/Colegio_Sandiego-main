@@ -1387,9 +1387,9 @@
               <div class="text-2xl font-bold text-emerald-700" x-text="reporteCorte?.cantidadPagos || 0"></div>
             </div>
             <div class="bg-amber-50 p-4 rounded-xl text-center">
-              <div class="text-xs text-gray-500">Efectivo</div>
-              <div class="text-2xl font-bold text-amber-700"
-                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.efectivo || 0).toLocaleString('es-MX')"></div>
+              <div class="text-xs text-gray-500">Transferencia</div>
+              <div class="text-xl font-bold text-gray-800"
+                x-text="'$' + (reporteCorte?.resumen?.porMetodo?.transferencia || 0).toLocaleString('es-MX')"></div>
             </div>
           </div>
           <table class="w-full text-sm">
@@ -3253,7 +3253,7 @@
           this.mostrarSugerenciasPago = false;
           this.nuevoPago = { alumno: '', alumnoId: null, concepto: 'Colegiatura', monto: '', fecha: new Date().toISOString().slice(0, 10), tipoPago: 'normal', mesesAdelantar: 1 };
         },
-        filtrarPagoAlumnos() {
+        async filtrarPagoAlumnos() {
           const q = this.busquedaPagoAlumno.trim().toLowerCase();
           if (!q) {
             this.pagoCoincidencias = [];
@@ -3262,9 +3262,17 @@
             this.nuevoPago.alumnoId = null;
             return;
           }
-          this.pagoCoincidencias = this.listaAlumnos
-            .filter(a => a.nombre.toLowerCase().includes(q) || a.matricula.toLowerCase().includes(q))
-            .slice(0, 8);
+          try {
+            const res = await window.saeApi.alumnos.listar({ q: q, limit: 10 });
+            if (res.ok) {
+              const data = res.pagination ? res.data : (Array.isArray(res.data) ? res.data : []);
+              this.pagoCoincidencias = data.map(window.saeApi.mapAlumno);
+            } else {
+              this.pagoCoincidencias = [];
+            }
+          } catch (e) {
+            this.pagoCoincidencias = [];
+          }
           this.mostrarSugerenciasPago = true;
           if (this.nuevoPago.alumno && this.busquedaPagoAlumno !== this.nuevoPago.alumno) {
             this.nuevoPago.alumno = '';
@@ -3450,7 +3458,7 @@
             res = await window.saeApi.pagos.adelantado({
               alumnoId: this.nuevoPago.alumnoId,
               meses: parseInt(this.nuevoPago.mesesAdelantar),
-              metodoPago: 'efectivo',
+              metodoPago: 'transferencia',
               fecha: this.nuevoPago.fecha,
               monto: parseFloat(this.nuevoPago.monto)
             });

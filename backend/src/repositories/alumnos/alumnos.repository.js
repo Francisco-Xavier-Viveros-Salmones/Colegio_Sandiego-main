@@ -180,11 +180,15 @@ async function findAll({ q, grupoId, nivel, grado, seccion, estado, page, limit 
   }
 
   if (usuario && usuario.rol === 'MAESTRA') {
-    grupoWhere.OR = [
-      { docenteTitularId: usuario.id },
-      { gruposMaterias: { some: { docenteId: usuario.id, eliminadoEn: null } } }
-    ];
-    filterGrupo = true;
+    const tienePermisoPagos = usuario.permisos && usuario.permisos.pagos && usuario.permisos.pagos !== 'NINGUNO';
+    if (!tienePermisoPagos) {
+      grupoWhere.OR = [
+        { docenteTitularId: usuario.id },
+        { gruposMaterias: { some: { docenteId: usuario.id, eliminadoEn: null } } }
+      ];
+      grupoWhere.ciclo = { activo: true };
+      filterGrupo = true;
+    }
   }
 
   if (filterGrupo) {
